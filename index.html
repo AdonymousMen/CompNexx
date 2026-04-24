@@ -3,57 +3,201 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>COMPARADOR NEXX — 3D desde Excel (A/C/E)</title>
+  <title>COMPARADOR NEXX — VISOR 3D · Recomendador</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     thead th{position:sticky;top:0;background:#fff;z-index:5}
     .pop{position:absolute;inset-inline:0;top:100%;z-index:30;max-height:16rem;overflow:auto;background:#fff;border:1px solid #e5e7eb;border-radius:.5rem;box-shadow:0 10px 30px rgba(0,0,0,.12)}
     .mono{font-variant-numeric:tabular-nums}
-    /* 3D cards */
-    .phone-outer{perspective:1200px}
-    .phone-3d{width:220px;height:440px;position:relative;margin:0 auto;transform-style:preserve-3d;transition:transform .8s;cursor:pointer}
-    .phone-3d.flipped{transform:rotateY(180deg)}
-    .phone-face{position:absolute;width:100%;height:100%;border-radius:28px;backface-visibility:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25),0 8px 25px rgba(0,0,0,.18);overflow:hidden;border:3px solid rgba(255,255,255,.08)}
-    .phone-back{transform:rotateY(180deg)}
-    .phone-image{width:100%;height:100%;object-fit:cover;border-radius:25px}
-    .loading-placeholder{width:100%;height:100%;background:linear-gradient(145deg,#f3f4f6,#e5e7eb);display:none;align-items:center;justify-content:center;color:#6b7280;font-size:14px;border-radius:25px}
+    
+    .viewer-3d {
+      width: 100%;
+      height: 520px;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #ffffff;
+      position: relative;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    }
+    
+    .viewer-3d iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #ffffff;
+    }
+    
+    .card-3d {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      background: white;
+      border-radius: 24px;
+    }
+    
+    .card-3d:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 30px -12px rgba(0,0,0,0.15);
+    }
+    
+    .floating-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-size: 12px;
+      color: white;
+      z-index: 20;
+      text-align: center;
+      font-weight: 500;
+      white-space: nowrap;
+      pointer-events: none;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    
+    .viewer-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+    }
+    
+    .loader-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #4f46e5;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .phone-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: #1e293b;
+      padding: 0 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Estilos para filas clickeables */
+    #tbody tr td:first-child {
+      cursor: pointer;
+      color: #4f46e5;
+      font-weight: 600;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+    }
+    
+    #tbody tr td:first-child:hover {
+      color: #6366f1;
+    }
+    
+    /* Modal */
+    #modalExplicacion {
+      transition: all 0.3s ease;
+    }
+    #modalExplicacion:not(.hidden) {
+      backdrop-filter: blur(4px);
+    }
+    
+    @media (max-width: 768px) {
+      .viewer-3d { height: 380px; }
+      .floating-hint { font-size: 10px; padding: 5px 12px; white-space: nowrap; }
+      .phone-title { font-size: 0.9rem; }
+    }
+    
+    /* Tooltip flotante a la derecha, cerca de la celda */
+.spec-clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.spec-clickable:hover::after {
+  content: "🔍 Haz clic para ver explicación";
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+  background: #1e293b;
+  color: white;
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+  z-index: 100;
+  font-weight: normal;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  pointer-events: none;
+}
+
+/* En pantallas pequeñas */
+@media (max-width: 768px) {
+  .spec-clickable:hover::after {
+    left: auto;
+    right: 100%;
+    margin-left: 0;
+    margin-right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
   <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-lg sm:text-2xl font-bold">📱 COMPARADOR NEXX — <span class="text-indigo-600">caracteristicas</span> + <span class="text-emerald-600">imagen</span> · <span class="text-fuchsia-600">3D</span> + <span class="text-amber-600">Recomendador</span></h1>
+    <h1 class="text-lg sm:text-2xl font-bold">📱 COMPARADOR NEXX — <span class="text-indigo-600">VISOR 3D</span> · <span class="text-amber-600">Recomendador</span></h1>
     <div class="flex items-center gap-2">
       <label class="inline-flex items-center gap-2 cursor-pointer">
         <input id="fileInput" type="file" accept=".xlsx,.xls" class="hidden" />
-        <span class="px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Cargar/Actualizar Excel</span>
+        <span class="px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Cargar Excel</span>
       </label>
-      <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200">Borrar cache</button>
+      <button id="btnClear" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-sm">Borrar cache</button>
     </div>
   </div>
 </header>
 
 <main class="max-w-7xl mx-auto px-4 py-6">
-  <p id="estado" class="text-sm text-slate-600 mb-4">Se leerán las hojas: <b>caracteristicas</b> (datos) e <b>imagen</b> (fotos). <b>Imagen usa A=Nombre, C=Frontal, E=Trasera (forzado)</b>. Se ignorará <b>Comparador</b>. Las especificaciones se muestran <b>tal cual están en el Excel</b>.</p>
+  <p id="estado" class="text-sm text-slate-500 mb-4">📌 Hoja <b>caracteristicas</b> (datos) + hoja <b>imagen</b> (columna C = link 3D)</p>
 
-  <!-- Buscadores SOLO EQUIPOS -->
   <section class="grid sm:grid-cols-3 gap-4 mb-6">
     <div class="relative">
       <label class="block text-sm font-semibold">Equipo 1</label>
-      <input id="q1" class="w-full mt-1 rounded-lg border px-3 py-2" placeholder="Escribe modelo (Columna A de caracteristicas)" autocomplete="off">
+      <input id="q1" class="w-full mt-1 rounded-lg border px-3 py-2" placeholder="Escribe modelo" autocomplete="off">
       <div id="p1" class="pop hidden"></div>
       <select id="s1" class="w-full mt-2 rounded-lg border px-3 py-2"></select>
     </div>
     <div class="relative">
       <label class="block text-sm font-semibold">Equipo 2</label>
-      <input id="q2" class="w-full mt-1 rounded-lg border px-3 py-2" placeholder="Escribe modelo (Columna A)" autocomplete="off">
+      <input id="q2" class="w-full mt-1 rounded-lg border px-3 py-2" placeholder="Escribe modelo" autocomplete="off">
       <div id="p2" class="pop hidden"></div>
       <select id="s2" class="w-full mt-2 rounded-lg border px-3 py-2"></select>
     </div>
     <div class="relative">
       <label class="block text-sm font-semibold">Equipo 3</label>
-      <input id="q3" class="w-full mt-1 rounded-lg border px-3 py-2" placeholder="Escribe modelo (Columna A)" autocomplete="off">
+      <input id="q3" class="w-full mt-1 rounded-lg border px-3 py-2" placeholder="Escribe modelo" autocomplete="off">
       <div id="p3" class="pop hidden"></div>
       <select id="s3" class="w-full mt-2 rounded-lg border px-3 py-2"></select>
     </div>
@@ -64,183 +208,161 @@
     <button id="btnReset" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg">Limpiar</button>
   </section>
 
-  <!-- Vista 3D y tarjetas con imágenes -->
   <section id="cards3D" class="grid sm:grid-cols-3 gap-6 mb-8"></section>
 
-  <!-- Tabla comparativa -->
   <section id="tblWrap" class="hidden">
     <div class="bg-white rounded-xl border overflow-auto">
       <div class="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-xl">
         <h2 class="text-xl font-semibold">Comparativa Detallada</h2>
-        <p class="text-blue-100 text-xs">✅ Catálogo intacto (texto exacto del Excel)</p>
+        <p class="text-blue-100 text-xs">✅ Haz clic en cualquier especificación para ver su explicación</p>
       </div>
       <table class="min-w-full text-sm">
         <thead class="border-b">
-          <tr>
-            <th class="p-3 text-left">Especificación</th>
-            <th id="h1" class="p-3 text-center"></th>
-            <th id="h2" class="p-3 text-center"></th>
-            <th id="h3" class="p-3 text-center"></th>
-          </tr>
+          <tr><th class="p-3 text-left">Especificación</th><th id="h1" class="p-3 text-center"></th><th id="h2" class="p-3 text-center"></th><th id="h3" class="p-3 text-center"></th></tr>
         </thead>
         <tbody id="tbody" class="divide-y"></tbody>
       </table>
     </div>
   </section>
 
-  <!-- Recomendador -->
   <section id="winnerSection" class="mt-8 rounded-xl shadow-lg p-6 text-white hidden" style="background:linear-gradient(90deg,#22c55e,#3b82f6);">
     <h3 class="text-xl font-bold">🏆 Recomendador</h3>
     <p id="winnerText" class="text-lg mt-2"></p>
     <ul id="winnerReasons" class="mt-3 text-sm list-disc pl-5"></ul>
     <div id="ranking" class="mt-4 bg-white/15 rounded-lg p-3 text-sm">
-      <div class="font-semibold mb-1">Ranking de comparados (puntajes normalizados /100):</div>
+      <div class="font-semibold mb-1">Ranking (puntajes /100):</div>
       <ol id="rankList" class="list-decimal pl-5"></ol>
-      <p class="text-xs mt-2">Ponderación: CPU 25%, Cámara 18%, Pantalla/Hz 10%, RAM 12%, Almacenamiento 7%, Batería/Carga 12%, Resistencia 6%, Bluetooth 4%, Precio 6%.</p>
+      <p class="text-xs mt-2">CPU 25% · Cámara 18% · Pantalla 10% · RAM 12% · Almacenamiento 7% · Batería/Carga 12% · Resistencia 6% · Bluetooth 4% · Precio 6%</p>
     </div>
   </section>
 </main>
 
-<script>
-// ========= Utilidades básicas =========
-const clean=s=>(s??'').toString().trim();
-const deaccent=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-const U = s => deaccent(clean(s).toUpperCase())
-                .replace(/\+/g, 'PLUS') // Convierte "+" en "PLUS"
-                .replace(/[^A-Z0-9 ]/g,' ')
-                .replace(/\s+/g,' ')
-                .trim(); // normaliza nombres
-const KEY='nexx_fiximg_cache_v1';
+<!-- Modal para explicaciones -->
+<div id="modalExplicacion" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden" onclick="if(event.target===this) cerrarModal()">
+  <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-auto shadow-2xl">
+    <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+      <h3 id="modalTitulo" class="text-xl font-bold text-indigo-700">📱 Pantalla</h3>
+      <button onclick="cerrarModal()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+    </div>
+    <div id="modalContenido" class="p-6 text-gray-700"></div>
+  </div>
+</div>
 
-// ========= Lectura de Excel =========
-function normalizeSheetName(n){ return deaccent(String(n||'').toLowerCase().trim()); }
-function getSheet(wb, wanted){
+<script>
+// ========= Utilidades =========
+const clean = s => (s ?? '').toString().trim();
+const deaccent = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const U = s => deaccent(clean(s).toUpperCase()).replace(/\+/g, 'PLUS').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const KEY = 'nexx_3d_final_v8';
+
+// ========= Lectura Excel =========
+function normalizeSheetName(n) { return deaccent(String(n || '').toLowerCase().trim()); }
+function getSheet(wb, wanted) {
   const names = wb.SheetNames;
   const target = normalizeSheetName(wanted);
-  let pick = names.find(n=> normalizeSheetName(n)===target);
-  if(pick) return {name:pick, ws: wb.Sheets[pick]};
-  pick = names.find(n=> normalizeSheetName(n).includes(target.slice(0,5)));
-  if(pick) return {name:pick, ws: wb.Sheets[pick]};
-  return {name:names[0], ws: wb.Sheets[names[0]]};
+  let pick = names.find(n => normalizeSheetName(n) === target);
+  if (pick) return { name: pick, ws: wb.Sheets[pick] };
+  pick = names.find(n => normalizeSheetName(n).includes(target.slice(0, 5)));
+  if (pick) return { name: pick, ws: wb.Sheets[pick] };
+  return { name: names[0], ws: wb.Sheets[names[0]] };
 }
+function sheetToAOA(ws) { return XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false }); }
 
-function sheetToAOA(ws){ return XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false}); }
+let DATA = [], MODELOS_SET = [];
+const visoresGuardados = {};
 
-// ========= Construcción de catálogo =========
-let DATA=[], MODELOS=[];
-
-function inferKeyFromHeader(h){
-  const s = deaccent(String(h||'').toLowerCase());
-  if(!s) return null;
-  if(s.includes('contado') || s.includes('cash')) return 'contado';
-  if(s.includes('cuota') || s.includes('mensual') || s.includes('12')) return 'cuota';
-  if(s.includes('pantalla') || s.includes('display')) return 'pantalla';
-  if(s.includes('peso')) return 'peso';
-  if(s.includes('resistencia') || s.includes('ip')) return 'resistencia';
-  if(s.includes('refresco') || s.includes('hz')) return 'refresco';
-  if(s.includes('procesador') || s.includes('chip') || s.includes('cpu')) return 'procesador';
-  if(s.includes('antutu')) return 'antutu';
-  if(s.includes('ram')) return 'ram';
-  if(s.includes('almacen') || s.includes('storage') || s.includes('rom')) return 'rom';
-  if(s.includes('ampliab') || s.includes('expand')) return 'ampliable';
-  if(s.includes('camara') && !s.includes('frontal')) return 'camSistema';
-  if(s.includes('ois') || s.includes('estabil')) return 'ois';
-  if(s.includes('video')) return 'video';
-  if(s.includes('frontal') || s.includes('selfie')) return 'camFrontal';
-  if(s.includes('bateria')) return 'bateria';
-  if(s.includes('carga') && (s.includes('w') || s.includes('rap'))) return 'carga';
-  if(s.includes('inalambr') || s.includes('wireless')) return 'inalambrica';
-  if(s.includes('bluetooth')) return 'bt';
-  if(s.includes('nfc')) return 'nfc';
-  if(s.includes('huella') || s.includes('finger')) return 'huella';
-  if(s.includes('actualiz') || s.includes('update')) return 'updates';
+function inferKeyFromHeader(h) {
+  const s = deaccent(String(h || '').toLowerCase());
+  if (!s) return null;
+  if (s.includes('contado') || s.includes('cash')) return 'contado';
+  if (s.includes('cuota') || s.includes('mensual') || s.includes('12')) return 'cuota';
+  if (s.includes('pantalla') || s.includes('display')) return 'pantalla';
+  if (s.includes('peso')) return 'peso';
+  if (s.includes('resistencia') || s.includes('ip')) return 'resistencia';
+  if (s.includes('refresco') || s.includes('hz')) return 'refresco';
+  if (s.includes('procesador') || s.includes('chip') || s.includes('cpu')) return 'procesador';
+  if (s.includes('antutu')) return 'antutu';
+  if (s.includes('ram')) return 'ram';
+  if (s.includes('almacen') || s.includes('storage') || s.includes('rom')) return 'rom';
+  if (s.includes('ampliab') || s.includes('expand')) return 'ampliable';
+  if (s.includes('camara') && !s.includes('frontal')) return 'camSistema';
+  if (s.includes('ois') || s.includes('estabil')) return 'ois';
+  if (s.includes('video')) return 'video';
+  if (s.includes('frontal') || s.includes('selfie')) return 'camFrontal';
+  if (s.includes('bateria')) return 'bateria';
+  if (s.includes('carga') && (s.includes('w') || s.includes('rap'))) return 'carga';
+  if (s.includes('inalambr') || s.includes('wireless')) return 'inalambrica';
+  if (s.includes('bluetooth')) return 'bt';
+  if (s.includes('nfc')) return 'nfc';
+  if (s.includes('huella') || s.includes('finger')) return 'huella';
+  if (s.includes('actualiz') || s.includes('update')) return 'updates';
   return null;
 }
 
-function buildFromCaracteristicas(A){
-  if(!A?.length) throw new Error('Hoja "caracteristicas" vacía.');
-  const first=A[0]||[]; const hasHeader=first.some(v=>String(v||'').trim());
-  let map={}, start=0; // idx->key
-  if(hasHeader){
-    first.forEach((h,i)=>{ if(i===0){map[i]='nombre';} else { const k=inferKeyFromHeader(h); if(k) map[i]=k; } });
-    start=1;
-  }else{
-    const pos = ['nombre','contado','cuota','pantalla','peso','resistencia','refresco','procesador','antutu','ram','rom','ampliable','camSistema','ois','video','camFrontal','bateria','carga','inalambrica','bt','nfc','huella','updates'];
-    pos.forEach((k,i)=> map[i]=k);
-    start=0;
+function buildFromCaracteristicas(A) {
+  if (!A?.length) throw new Error('Hoja "caracteristicas" vacía.');
+  const first = A[0] || [];
+  const hasHeader = first.some(v => String(v || '').trim());
+  let map = {}, start = 0;
+  if (hasHeader) {
+    first.forEach((h, i) => { if (i === 0) { map[i] = 'nombre'; } else { const k = inferKeyFromHeader(h); if (k) map[i] = k; } });
+    start = 1;
+  } else {
+    const pos = ['nombre', 'contado', 'cuota', 'pantalla', 'peso', 'resistencia', 'refresco', 'procesador', 'antutu', 'ram', 'rom', 'ampliable', 'camSistema', 'ois', 'video', 'camFrontal', 'bateria', 'carga', 'inalambrica', 'bt', 'nfc', 'huella', 'updates'];
+    pos.forEach((k, i) => map[i] = k);
+    start = 0;
   }
-  const out=[];
-  for(let r=start;r<A.length;r++){
-    const row=A[r]||[]; const nombre=clean(row[0]); if(!nombre) continue;
-    const obj={nombre};
-    Object.entries(map).forEach(([i,k])=>{ if(k==='nombre') return; const v=row[+i]; if(v!==undefined && v!==null && String(v).trim()!==''){ obj[k]=String(v).trim(); } });
-    obj.imgF=''; obj.imgB='';
+  const out = [];
+  for (let r = start; r < A.length; r++) {
+    const row = A[r] || [];
+    const nombre = clean(row[0]);
+    if (!nombre) continue;
+    const obj = { nombre };
+    Object.entries(map).forEach(([i, k]) => { if (k === 'nombre') return; const v = row[+i]; if (v !== undefined && v !== null && String(v).trim() !== '') { obj[k] = String(v).trim(); } });
+    obj.link3D = '';
     out.push(obj);
   }
   return out;
 }
 
-function sanitizeUrl(u){
-  let s=clean(u);
-  if(!s) return '';
-  s=s.replace(/^["']|["']$/g,''); // quita comillas pegadas
-  if(/^www\./i.test(s)) s='https://'+s; // agrega protocolo si viene "www."
-  // ---- Google Drive -> directo preview ----
-  let m = s.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)\/view/i);
-  if(m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
-  m = s.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/i);
-  if(m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
-  m = s.match(/https?:\/\/drive\.google\.com\/uc\?(?:export=\w+&)?id=([^&]+)/i);
-  if(m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
-  m = s.match(/https?:\/\/drive\.google\.com\/thumbnail\?id=([^&]+)/i);
-  if(m) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
-  // ---- Dropbox compartido -> enlace crudo ----
-  m = s.match(/https?:\/\/www\.dropbox\.com\/s\/([^?]+)(?:\?[^#]*)?/i);
-  if(m) return `https://dl.dropboxusercontent.com/s/${m[1]}`;
-  // Asegura raw=1 si viene con dl=0/raw=0
-  s = s.replace(/\?(?:.*)(dl|raw)=0/i, '?$1=1');
-  return s;
-}
-
-function buildFromImagen(A){
-  if(!A?.length) return [];
-  const first=A[0]||[]; const hasHeader=first.some(v=>String(v||'').trim());
-  const start = hasHeader?1:0; // saltar cabecera si existe
-  // 👉 Forzamos A/C/E sin depender del texto del header
-  const idx={nombre:0, front:2, back:4};
-  const imgs=[];
-  for(let r=start;r<A.length;r++){
-    const row=A[r]||[]; const nombre=clean(row[idx.nombre]); if(!nombre) continue;
-    const front = sanitizeUrl(row[idx.front]||'');
-    const back  = sanitizeUrl(row[idx.back]||'');
-    imgs.push({nombre, imgF:front, imgB:back});
+function buildFromImagen(A) {
+  if (!A?.length) return [];
+  const first = A[0] || [];
+  const hasHeader = first.some(v => String(v || '').trim());
+  const start = hasHeader ? 1 : 0;
+  const idx = { nombre: 0, link3D: 2 };
+  const links = [];
+  for (let r = start; r < A.length; r++) {
+    const row = A[r] || [];
+    const nombre = clean(row[idx.nombre]);
+    if (!nombre) continue;
+    let link3D = row[idx.link3D] ? clean(row[idx.link3D]) : '';
+    if (link3D) link3D = link3D.split('?')[0];
+    links.push({ nombre, link3D });
   }
-  return imgs;
+  return links;
 }
 
-function fuzzyFindKey(dictKeys, targetKey){
-  const tk=U(targetKey);
-  let hit = dictKeys.find(k=>k===tk);
-  if(hit) return hit;
-  hit = dictKeys.find(k=>k.includes(tk) || tk.includes(k));
-  if(hit) return hit;
-  const words=tk.split(' ').filter(w=>w.length>=3);
-  return dictKeys.find(k=> words.filter(w=>k.includes(w)).length>=Math.max(1,Math.min(2,words.length)) ) || null;
+function fuzzyFindKey(dictKeys, targetKey) {
+  const tk = U(targetKey);
+  let hit = dictKeys.find(k => k === tk);
+  if (hit) return hit;
+  hit = dictKeys.find(k => k.includes(tk) || tk.includes(k));
+  if (hit) return hit;
+  const words = tk.split(' ').filter(w => w.length >= 3);
+  return dictKeys.find(k => words.filter(w => k.includes(w)).length >= Math.max(1, Math.min(2, words.length))) || null;
 }
 
-function mergeCarImg(car, imgs){
-  const dict=new Map();
-  car.forEach(p=> dict.set(U(p.nombre), {...p}) );
-  const keys=Array.from(dict.keys());
-  imgs.forEach(i=>{
-    const keyExact=U(i.nombre);
-    let useKey = dict.has(keyExact)? keyExact : fuzzyFindKey(keys, i.nombre);
-    if(useKey){
-      const prev=dict.get(useKey);
-      prev.imgF = i.imgF || prev.imgF; prev.imgB = i.imgB || prev.imgB;
-      // fallback si solo hay 1 foto
-      if(!prev.imgF && prev.imgB) prev.imgF = prev.imgB;
-      if(!prev.imgB && prev.imgF) prev.imgB = prev.imgF;
+function mergeCarImg(car, links3D) {
+  const dict = new Map();
+  car.forEach(p => dict.set(U(p.nombre), { ...p, link3D: '' }));
+  const keys = Array.from(dict.keys());
+  links3D.forEach(i => {
+    const keyExact = U(i.nombre);
+    let useKey = dict.has(keyExact) ? keyExact : fuzzyFindKey(keys, i.nombre);
+    if (useKey) {
+      const prev = dict.get(useKey);
+      prev.link3D = i.link3D || '';
       dict.set(useKey, prev);
     }
   });
@@ -248,192 +370,1011 @@ function mergeCarImg(car, imgs){
 }
 
 // ========= UI =========
-let MODELOS_SET=[];
-function buildSelect(sel, f=''){
-  const q=(f||'').toLowerCase().trim();
-  const list=MODELOS_SET.filter(n=>n.toLowerCase().includes(q));
-  const cur=sel.value;
-  sel.innerHTML='<option value="">Seleccionar...</option>'+list.map(n=>`<option value="${n}">${n}</option>`).join('');
-  if(cur && list.includes(cur)) sel.value=cur;
+function buildSelect(sel, f = '') {
+  const q = (f || '').toLowerCase().trim();
+  const list = MODELOS_SET.filter(n => n.toLowerCase().includes(q));
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Seleccionar...</option>' + list.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (cur && list.includes(cur)) sel.value = cur;
 }
-function renderPop(container, query){
-  const q=(query||'').toLowerCase().trim();
-  const list=MODELOS_SET.filter(n=>n.toLowerCase().includes(q)).slice(0,60);
-  if(!q || !list.length){ container.classList.add('hidden'); container.innerHTML=''; return; }
-  container.innerHTML = list.map(n=>`<button type="button" data-n="${encodeURIComponent(n)}" class="w-full text-left px-3 py-2 hover:bg-indigo-50">${n}</button>`).join('');
+
+function renderPop(container, query) {
+  const q = (query || '').toLowerCase().trim();
+  const list = MODELOS_SET.filter(n => n.toLowerCase().includes(q)).slice(0, 60);
+  if (!q || !list.length) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+  container.innerHTML = list.map(n => `<button type="button" data-n="${encodeURIComponent(n)}" class="w-full text-left px-3 py-2 hover:bg-indigo-50">${n}</button>`).join('');
   container.classList.remove('hidden');
 }
-function wire(qId,pId,sel){
-  const q=document.getElementById(qId), p=document.getElementById(pId);
-  q.addEventListener('input', e=>{ buildSelect(sel, e.target.value); renderPop(p, e.target.value); });
-  p.addEventListener('click', e=>{ const b=e.target.closest('button[data-n]'); if(!b) return; const n=decodeURIComponent(b.dataset.n); sel.value=n; p.classList.add('hidden'); q.value=''; update(); });
-  q.addEventListener('blur', ()=> setTimeout(()=>p.classList.add('hidden'),120));
-}
-const s1=document.getElementById('s1'), s2=document.getElementById('s2'), s3=document.getElementById('s3');
-wire('q1','p1',s1); wire('q2','p2',s2); wire('q3','p3',s3);
 
-function phone3D(p){
+function wire(qId, pId, sel) {
+  const q = document.getElementById(qId), p = document.getElementById(pId);
+  q.addEventListener('input', e => { buildSelect(sel, e.target.value); renderPop(p, e.target.value); });
+  p.addEventListener('click', e => { const b = e.target.closest('button[data-n]'); if (!b) return; const n = decodeURIComponent(b.dataset.n); sel.value = n; p.classList.add('hidden'); q.value = ''; update(); });
+  q.addEventListener('blur', () => setTimeout(() => p.classList.add('hidden'), 120));
+}
+
+const s1 = document.getElementById('s1'), s2 = document.getElementById('s2'), s3 = document.getElementById('s3');
+wire('q1', 'p1', s1); wire('q2', 'p2', s2); wire('q3', 'p3', s3);
+
+const hints = ["🖱️ Haz clic y arrastra para girar 360°", "✨ Manten el click y explora", "🖱️ Click + arrastrar = rotar", "🔍 Click, mueve y disfruta la vista en 3D"];
+function getRandomHint() { return hints[Math.floor(Math.random() * hints.length)]; }
+
+function render3DCard(p, cardIndex) {
+  const has3D = p.link3D && p.link3D.trim() !== '';
+  const embedUrl = has3D ? p.link3D : '';
+  const viewerId = `viewer-${p.nombre.replace(/[^a-zA-Z0-9]/g, '-')}`;
+  const randomHint = getRandomHint();
+  
   return `
-  <div class="bg-white border rounded-xl p-3 text-center">
-    <div class="text-sm font-semibold mb-3">${p.nombre}</div>
-    <div class="phone-outer">
-      <div class="phone-3d" onclick="this.classList.toggle('flipped')">
-        <div class="phone-face phone-front">
-          <img src="${p.imgF||''}" alt="${p.nombre} front" class="phone-image" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-          <div class="loading-placeholder">📱 Sin frontal</div>
-        </div>
-        <div class="phone-face phone-back">
-          <img src="${p.imgB||p.imgF||''}" alt="${p.nombre} back" class="phone-image" referrerpolicy="no-referrer" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-          <div class="loading-placeholder">📸 Sin trasera</div>
-        </div>
+    <div class="card-3d bg-white border rounded-xl p-4 text-center shadow-sm">
+      <div class="phone-title">${p.nombre}</div>
+      <div class="viewer-3d relative" id="${viewerId}">
+        ${has3D ? `
+          <div class="viewer-loader" id="loader-${viewerId}">
+            <div class="loader-spinner"></div>
+          </div>
+          <iframe 
+            src="${embedUrl}" 
+            frameborder="0" 
+            allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; xr-spatial-tracking"
+            loading="lazy"
+            onload="document.getElementById('loader-${viewerId}')?.remove();
+                     const container = document.getElementById('${viewerId}');
+                     const iframeActual = container?.querySelector('iframe');
+                     if (iframeActual && !visoresGuardados['${p.nombre}']) {
+                       visoresGuardados['${p.nombre}'] = iframeActual.cloneNode(true);
+                     }">
+          </iframe>
+          <div class="floating-hint">${randomHint}</div>
+        ` : `
+          <div class="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center rounded-2xl" style="height:520px">
+            <div class="text-center text-slate-500 p-6">
+              <svg class="w-20 h-20 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <p class="text-base font-medium">Sin visor 3D</p>
+              <p class="text-sm mt-2">Agrega link en columna C de "Imagen"</p>
+            </div>
+          </div>
+        `}
       </div>
     </div>
-  </div>`;
+  `;
 }
-function renderCards3D(names){
-  const wrap=document.getElementById('cards3D'); wrap.innerHTML='';
-  names.forEach(n=>{ const p=DATA.find(d=>d.nombre===n); if(!p) return; const div=document.createElement('div'); div.innerHTML=phone3D(p); wrap.appendChild(div.firstElementChild); });
+
+function renderCards3D(names) {
+  const wrap = document.getElementById('cards3D');
+  const iframesActuales = {};
+  document.querySelectorAll('.card-3d').forEach(card => {
+    const titulo = card.querySelector('.phone-title')?.innerText;
+    const iframe = card.querySelector('iframe');
+    if (titulo && iframe) iframesActuales[titulo] = iframe.cloneNode(true);
+  });
+  Object.assign(visoresGuardados, iframesActuales);
+  wrap.innerHTML = '';
+  names.forEach((n, idx) => {
+    const p = DATA.find(d => d.nombre === n);
+    if (!p) return;
+    const div = document.createElement('div');
+    div.innerHTML = render3DCard(p, idx);
+    wrap.appendChild(div.firstElementChild);
+    const containerId = `viewer-${p.nombre}`;
+    const container = document.getElementById(containerId);
+    if (container && visoresGuardados[p.nombre]) {
+      container.innerHTML = '';
+      container.appendChild(visoresGuardados[p.nombre].cloneNode(true));
+    }
+  });
 }
 
 const FIELDS = [
-  {k:'contado',label:'💵 Contado (S/)'},
-  {k:'cuota',label:'💳 Cuota x 12m'},
-  {k:'pantalla',label:'📱 Pantalla'},
-  {k:'peso',label:'⚖️ Peso'},
-  {k:'resistencia',label:'💧 Resistencia'},
-  {k:'refresco',label:'🔄 Tasa de Refresco (Hz)'},
-  {k:'procesador',label:'⚡ Procesador'},
-  {k:'antutu',label:'🔢 AnTuTu'},
-  {k:'ram',label:'🧠 RAM'},
-  {k:'rom',label:'💾 Almacenamiento'},
-  {k:'ampliable',label:'🧩 Ampliable'},
-  {k:'camSistema',label:'📸 Cámaras'},
-  {k:'ois',label:'🧭 OIS'},
-  {k:'video',label:'🎥 Video'},
-  {k:'camFrontal',label:'🤳 Frontal'},
-  {k:'bateria',label:'🔋 Batería'},
-  {k:'carga',label:'⚡ Carga (W)'},
-  {k:'inalambrica',label:'📡 Carga Inalámbrica'},
-  {k:'bt',label:'📶 Bluetooth'},
-  {k:'nfc',label:'📲 NFC'},
-  {k:'huella',label:'🆔 Huella'},
-  {k:'updates',label:'🗓️ Actualización'}
+  { k: 'contado', label: '💰 Contado (S/?)' }, { k: 'cuota', label: '📆 Cuota x 12m' },
+  { k: 'pantalla', label: '📱 Pantalla' }, { k: 'peso', label: '⚖️ Peso' },
+  { k: 'resistencia', label: '💧 Resistencia' }, { k: 'refresco', label: '🔄 Tasa Refresco' },
+  { k: 'procesador', label: '⚡ Procesador' }, { k: 'antutu', label: '📊 AnTuTu' },
+  { k: 'ram', label: '🧠 RAM' }, { k: 'rom', label: '💾 Almacenamiento' },
+  { k: 'ampliable', label: '💳 Ampliable' }, { k: 'camSistema', label: '📸 Cámaras' },
+  { k: 'ois', label: '📷 OIS' }, { k: 'video', label: '🎥 Video' },
+  { k: 'camFrontal', label: '🤳 Frontal' }, { k: 'bateria', label: '🔋 Batería' },
+  { k: 'carga', label: '⚡ Carga' }, { k: 'inalambrica', label: '🔌 Carga Inalámbrica' },
+  { k: 'bt', label: '📶 Bluetooth' }, { k: 'nfc', label: '📲 NFC' },
+  { k: 'huella', label: '🆔 Huella' }, { k: 'updates', label: '📅 Actualización' }
 ];
 
-function byName(n){ return DATA.find(d=>d.nombre===n) || null; }
-function renderTable(){
-  const names=[s1.value,s2.value,s3.value].filter(Boolean);
-  document.getElementById('h1').textContent=names[0]||'';
-  document.getElementById('h2').textContent=names[1]||'';
-  document.getElementById('h3').textContent=names[2]||'';
-  const tb=document.getElementById('tbody'); tb.innerHTML='';
-  FIELDS.forEach(row=>{
-    const has = names.some(n=>{ const v=(byName(n)||{})[row.k]; return v!=null && String(v).trim()!==''; });
-    if(!has) return;
-    const tr=document.createElement('tr');
-    tr.innerHTML = `<td class='p-3 font-medium whitespace-nowrap'>${row.label}</td>`+
-      names.map(n=>{ const v=(byName(n)||{})[row.k]; return `<td class='p-3 text-center'>${(v??'')!==''?v:'—'}</td>`; }).join('');
+function byName(n) { return DATA.find(d => d.nombre === n) || null; }
+
+function renderTable() {
+  const names = [s1.value, s2.value, s3.value].filter(Boolean);
+  document.getElementById('h1').textContent = names[0] || '';
+  document.getElementById('h2').textContent = names[1] || '';
+  document.getElementById('h3').textContent = names[2] || '';
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  
+  FIELDS.forEach(row => {
+    const has = names.some(n => { const v = (byName(n) || {})[row.k]; return v != null && String(v).trim() !== ''; });
+    if (!has) return;
+    const tr = document.createElement('tr');
+    
+    // Formatear el valor de AnTuTu si es necesario
+    let valoresFormateados = names.map(n => {
+      let v = (byName(n) || {})[row.k];
+      if (v && row.k === 'antutu') {
+        const str = String(v).toLowerCase().trim();
+        let numMatch = str.match(/(\d+(?:\.\d+)?)/);
+        if (numMatch) {
+          let num = parseFloat(numMatch[1]);
+          if (str.includes('m')) {
+            v = v;
+          } else if (str.includes('k')) {
+            if (num >= 1000) {
+              v = (num / 1000).toFixed(2).replace(/\.00$/, '') + 'M';
+            } else {
+              v = num + 'k';
+            }
+          } else if (num >= 1000000) {
+            v = (num / 1000000).toFixed(2).replace(/\.00$/, '') + 'M';
+          } else if (num >= 1000) {
+            v = (num / 1000).toFixed(0) + 'k';
+          }
+        }
+      }
+      return `<td class='p-3 text-center'>${(v ?? '') !== '' ? v : '—'}</td>`;
+    }).join('');
+    
+    tr.innerHTML = `<td class='p-3 font-medium whitespace-nowrap'>${row.label}</td>` + valoresFormateados;
     tb.appendChild(tr);
   });
+  
   document.getElementById('tblWrap').classList.toggle('hidden', !names.length);
+  hacerTablaClickeable();
+}
+
+// ========= EXPLICACIONES DETALLADAS =========
+const explicaciones = {
+  'pantalla': {
+    titulo: '📱 Pantalla',
+    contenido: `<p class="mb-4">La <strong class="text-indigo-600">pantalla</strong> es el componente que más interactúas. Determina la calidad visual y la experiencia de uso.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">📐 Resolución</h4>
+    <ul class="list-disc pl-6 mb-4 space-y-1"><li><strong>HD+ (720p)</strong> - Resolución básica, suficiente para uso diario.</li><li><strong>FHD+ (1080p)</strong> - Calidad Full HD, ideal para videos y juegos.</li><li><strong>QHD+ (1440p)</strong> - Mayor nitidez, para pantallas grandes.</li><li><strong>UHD (4K)</strong> - Calidad superior, solo en gama alta.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">🖥️ Tipo de panel</h4>
+    <ul class="list-disc pl-6 mb-4 space-y-1"><li><strong>AMOLED / Super AMOLED</strong> - Colores vivos, negros profundos, ahorro de batería.</li><li><strong>IPS LCD</strong> - Buenos ángulos de visión, colores naturales.</li><li><strong>TFT LCD</strong> - Tecnología más antigua, menor calidad.</li><li><strong>pOLED</strong> - Variante flexible del AMOLED.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔄 Tasa de refresco (Hz)</h4>
+    <ul class="list-disc pl-6 mb-4 space-y-1"><li><strong>60Hz</strong> - Estándar, suficiente para uso básico.</li><li><strong>90Hz</strong> - Mayor fluidez al navegar.</li><li><strong>120Hz o más</strong> - Fluidez extrema, ideal para juegos.</li></ul>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Una pantalla AMOLED con FHD+ y 120Hz es ideal para la mayoría de usuarios.</p></div>`
+  },
+  'resistencia': {
+  titulo: '💧 Resistencia al agua, polvo y golpes',
+  contenido: `<p class="mb-4">La <strong class="text-indigo-600">resistencia IP</strong> (Ingress Protection) indica qué tan protegido está el celular contra el <strong>polvo (primer dígito)</strong> y el <strong>agua (segundo dígito)</strong>.</p>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">🔢 Protección contra el POLVO (Primer dígito)</h4>
+  <ul class="list-disc pl-6 mb-4 space-y-1">
+    <li><strong>5X</strong> - Protección parcial contra el polvo (no entra suficiente para dañar el equipo).</li>
+    <li><strong>6X</strong> - Protección total contra el polvo (hermético, no entra nada).</li>
+  </ul>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">💧 Protección contra el AGUA (Segundo dígito)</h4>
+  <ul class="list-disc pl-6 mb-4 space-y-1">
+    <li><strong>X4</strong> - Salpicaduras de agua desde cualquier dirección.</li>
+    <li><strong>X5</strong> - Chorros de agua a baja presión.</li>
+    <li><strong>X6</strong> - Chorros de agua potentes (oleaje).</li>
+    <li><strong>X7</strong> - Sumergible hasta 1 metro durante 30 minutos.</li>
+    <li><strong>X8</strong> - Sumergible a más de 1 metro (el fabricante especifica la profundidad).</li>
+    <li><strong>X9</strong> - Resistente a agua a alta presión y alta temperatura (limpieza industrial).</li>
+  </ul>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">📊 Ejemplos comunes en celulares</h4>
+  <ul class="list-disc pl-6 mb-4 space-y-1">
+    <li><strong>IP54</strong> - Protegido contra polvo (5) y salpicaduras (4). Gama media.</li>
+    <li><strong>IP67</strong> - Protección total contra polvo (6) y sumergible 1m (7). Gama alta básica.</li>
+    <li><strong>IP68</strong> - Protección total contra polvo (6) y sumergible >1m (8). Estándar en gama alta.</li>
+    <li><strong>IP69 / IP69K</strong> - Protección total contra polvo (6) y agua a alta presión/temperatura (9). Industrial.</li>
+  </ul>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">🛡️ MIL-STD-810H (Estándar militar)</h4>
+  <p>Certifica resistencia a: caídas desde 1.22m, temperaturas de -32°C a 63°C, humedad 95%, vibraciones, altitud 4,572m, polvo, arena y salinidad.</p>
+  
+  <div class="bg-amber-50 p-4 rounded-lg mt-4">
+    <p class="text-sm text-amber-800"><strong>⚠️ Nota importante:</strong> La resistencia IP puede degradarse con el uso y los golpes. MIL-STD-810H no garantiza resistencia al agua, solo a condiciones extremas como caídas y temperaturas.</p>
+  </div>`
+},
+  'refresco': {
+  titulo: '🔄 Tasa de Refresco (Hz)',
+  contenido: `<p class="mb-4">La <strong class="text-indigo-600">tasa de refresco</strong> es la cantidad de veces por segundo que se actualiza la imagen en pantalla. Se mide en <strong>Hertz (Hz)</strong>. A mayor Hz, más fluidez.</p>
+  
+  <div class="my-4 bg-slate-100 rounded-xl p-3 text-center">
+    <img src="https://i.makeagif.com/media/3-02-2023/F-VLNS.gif" class="mx-auto rounded-lg w-full max-w-md" alt="Comparativa 60Hz vs 120Hz vs 144Hz vs 240Hz" loading="lazy">
+    <p class="text-xs text-slate-500 mt-2">Comparativa visual: 60Hz → 120Hz → 144Hz → 240Hz (cámara lenta)</p>
+    <p class="text-xs text-slate-400 mt-1">Fuente: MakeaGif</p>
+  </div>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">📊 ¿Cuántos Hz necesitas?</h4>
+  <ul class="list-disc pl-6 mb-4 space-y-1">
+    <li><strong>60Hz</strong> - Estándar. 60 imágenes por segundo. Suficiente para uso diario.</li>
+    <li><strong>90Hz</strong> - 90 imágenes por segundo. Notarás más fluidez al hacer scroll.</li>
+    <li><strong>120Hz</strong> - 120 imágenes por segundo. Fluidez extrema, ideal para juegos.</li>
+    <li><strong>144Hz o más</strong> - Para gamers muy exigentes o esports.</li>
+  </ul>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">🔋 Consumo de batería</h4>
+  <p>Mayor tasa de refresco = más consumo de batería. Muchos celulares tienen <strong>refresco adaptativo</strong> que ajusta los Hz según lo que estés haciendo (ej: 120Hz al hacer scroll, 60Hz al ver una foto fija).</p>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">🎮 ¿Realmente se nota?</h4>
+  <p>Sí, especialmente al hacer scroll rápido en redes sociales o jugar. Una vez que pruebas 120Hz, volver a 60Hz se siente "lento" o "tartamudo".</p>
+  
+  <div class="bg-indigo-50 p-4 rounded-lg mt-4">
+    <p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Busca al menos 90Hz en 2024. Los 120Hz son ideales si juegas en el celular.</p>
+  </div>`
+},
+  'procesador': {
+    titulo: '⚡ Procesador (CPU)',
+    contenido: `<p class="mb-4">El <strong class="text-indigo-600">procesador</strong> es el cerebro del celular. Determina velocidad, eficiencia y rendimiento en juegos.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">🏢 Fabricantes</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>Qualcomm Snapdragon</strong> - Los más populares. Buena eficiencia.</li><li><strong>MediaTek Dimensity / Helio</strong> - Buena relación calidad-precio.</li><li><strong>Samsung Exynos</strong> - Usados en algunos Samsung.</li><li><strong>Apple Bionic</strong> - Los más potentes, solo iPhone.</li><li><strong>Google Tensor</strong> - Diseñados por Google.</li><li><strong>Unisoc</strong> - Gama de entrada, económicos.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔢 Nanómetros (nm)</h4>
+    <p>A menor número de nanómetros, más eficiente (menos calor y batería): 3-4nm es lo mejor, 5-6nm es eficiente, 12nm+ es tecnología más antigua.</p>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Para uso diario, Snapdragon 6 Gen 1 o Dimensity 7000 es suficiente. Para juegos exigentes, Snapdragon 8 Gen o Dimensity 9000.</p></div>`
+  },
+ 'antutu': {
+  titulo: '📊 AnTuTu (Puntuación de rendimiento)',
+  contenido: `<p class="mb-4"><strong class="text-indigo-600">AnTuTu</strong> es el benchmark más popular para medir el rendimiento general de un celular. La puntuación se expresa en <strong>miles (k)</strong> o <strong>millones (M)</strong>.</p>
+  
+  <div class="bg-blue-50 p-3 rounded-lg mb-4">
+    <p class="text-sm font-semibold text-blue-800">📌 ¿Cómo leer la puntuación?</p>
+    <ul class="list-disc pl-6 text-sm mt-1">
+      <li><strong>470k</strong> = 470,000 puntos (gama media)</li>
+      <li><strong>1.2M</strong> = 1,200,000 puntos (gama alta)</li>
+      <li><strong>2.08M</strong> = 2,080,000 puntos (gama alta premium)</li>
+    </ul>
+  </div>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">📊 Rangos AnTuTu 10 (referencia 2025)</h4>
+  <ul class="list-disc pl-6 mb-4 space-y-1">
+    <li><strong>Menos de 300k</strong> - Gama baja. Uso básico (WhatsApp, llamadas, navegación ligera).</li>
+    <li><strong>300k - 500k</strong> - Gama media baja. Redes sociales, multitarea ligera.</li>
+    <li><strong>500k - 800k</strong> - Gama media. Juegos casuales, buena fluidez.</li>
+    <li><strong>800k - 1.2M</strong> - Gama media alta. Juegos exigentes en calidad media.</li>
+    <li><strong>1.2M - 1.8M</strong> - Gama alta. Juegos exigentes en calidad alta.</li>
+    <li><strong>Más de 1.8M</strong> - Gama alta premium. Lo mejor del mercado, ideal para juegos pesados y edición de video.</li>
+  </ul>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">🧠 ¿Qué mide AnTuTu?</h4>
+  <ul class="list-disc pl-6 mb-4 space-y-1">
+    <li><strong>CPU (35%)</strong> - Capacidad de procesamiento general. Afecta la velocidad de apps y sistema.</li>
+    <li><strong>GPU (30%)</strong> - Rendimiento gráfico. Afecta los juegos y edición de video.</li>
+    <li><strong>MEM (20%)</strong> - Velocidad de RAM y almacenamiento. Afecta la apertura de apps y transferencia de archivos.</li>
+    <li><strong>UX (15%)</strong> - Experiencia de usuario. Afecta la fluidez de la interfaz y animaciones.</li>
+  </ul>
+  
+  <h4 class="font-bold text-lg mt-4 mb-2">⚡ Factores que influyen en la puntuación</h4>
+  <ul class="list-disc pl-6 mb-4 space-y-1">
+    <li><strong>Procesador (Snapdragon, MediaTek, Apple Bionic, Exynos)</strong> - El componente más importante.</li>
+    <li><strong>RAM y tipo de almacenamiento</strong> - UFS 3.1/4.0 es más rápido que eMMC.</li>
+    <li><strong>Refrigeración</strong> - Celulares con buena refrigeración mantienen el rendimiento por más tiempo.</li>
+    <li><strong>Software y optimización</strong> - Algunas marcas optimizan mejor el sistema.</li>
+  </ul>
+  
+  <div class="bg-indigo-50 p-4 rounded-lg mt-4">
+    <p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> No te obsesiones con la puntuación. Un celular con 500k puede ser suficiente para el 90% de los usuarios. Lo importante es la experiencia en el día a día, no solo los números.</p>
+    <p class="text-xs text-indigo-700 mt-2">🔍 En este comparador, la puntuación AnTuTu influye en un 25% en la recomendación final (junto con el procesador).</p>
+  </div>`
+},
+  'ram': {
+    titulo: '🧠 RAM (Memoria de trabajo)',
+    contenido: `<p class="mb-4">La <strong class="text-indigo-600">RAM</strong> permite tener varias aplicaciones abiertas a la vez.</p>
+    <ul class="list-disc pl-6 mb-4"><li><strong>2-3 GB</strong> - Uso muy básico.</li><li><strong>4 GB</strong> - Uso normal (redes sociales).</li><li><strong>6 GB</strong> - Buen rendimiento.</li><li><strong>8 GB</strong> - Ideal para multitarea y juegos.</li><li><strong>12-16 GB</strong> - Gama alta.</li><li><strong>24 GB+</strong> - Exagerado, más marketing que necesidad.</li></ul>
+    <p><strong>RAM Boost / RAM Plus:</strong> Usa almacenamiento como RAM virtual. Ayuda a mantener más apps abiertas, pero es más lento que la RAM física.</p>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> 8 GB es suficiente para cualquier uso normal.</p></div>`
+  },
+  'almacenamiento': {
+    titulo: '💾 Almacenamiento (ROM)',
+    contenido: `<p class="mb-4">El <strong class="text-indigo-600">almacenamiento</strong> guarda tus fotos, aplicaciones y archivos.</p>
+    <ul class="list-disc pl-6 mb-4"><li><strong>64 GB</strong> - Básico, uso ligero.</li><li><strong>128 GB</strong> - Estándar actual.</li><li><strong>256 GB</strong> - Ideal para videos y juegos.</li><li><strong>512 GB o 1 TB</strong> - Usuario muy exigente.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">⚡ Tipos de almacenamiento</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>eMMC</strong> - Lento, gama baja.</li><li><strong>UFS 2.1 / 2.2</strong> - Rápido, gama media.</li><li><strong>UFS 3.1 / 4.0</strong> - Muy rápido, gama alta.</li><li><strong>NVMe</strong> - Apple, extremadamente rápido.</li></ul>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> 128 GB UFS es el punto dulce para la mayoría.</p></div>`
+  },
+  'camSistema': {
+    titulo: '📸 Cámaras',
+    contenido: `<p class="mb-4">El <strong class="text-indigo-600">sistema de cámaras</strong> determina la calidad de tus fotos y videos.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔢 Tipos de cámaras</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>Principal</strong> - La que más usas.</li><li><strong>Ultra gran angular</strong> - Captura más escena.</li><li><strong>Teleobjetivo</strong> - Zoom óptico sin pérdida.</li><li><strong>Macro</strong> - Primeros planos.</li><li><strong>Profundidad</strong> - Efecto de desenfoque (bokeh).</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">📷 Apertura focal (ƒ/)</h4>
+    <p>Menor número = más luz entra. <strong>ƒ/1.8</strong> es excelente para fotos nocturnas; <strong>ƒ/2.4</strong> necesita más luz. Una cámara ƒ/1.8 deja entrar el doble de luz que una ƒ/2.4.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">📊 Megapíxeles (MP)</h4>
+    <p>No son lo más importante. Un sensor de 50MP con buena apertura puede ser mejor que uno de 108MP barato.</p>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Busca ƒ/1.8 o menor en la cámara principal. Un buen conjunto es: Principal 50MP + UGA + OIS.</p></div>`
+  },
+  'ois': {
+    titulo: '📷 Estabilización Óptica (OIS)',
+    contenido: `<p class="mb-4">La <strong class="text-indigo-600">Estabilización Óptica (OIS)</strong> compensa los movimientos de la mano usando lentes flotantes o un sensor móvil.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">⚙️ ¿Cómo funciona?</h4>
+    <p>Unos giroscopios detectan el movimiento y unos motores mueven la lente o el sensor en dirección contraria al temblor, en tiempo real.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">📸 Beneficios del OIS</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>Fotos nocturnas más nítidas</strong> - Permite usar velocidades de obturación más lentas sin que salgan movidas.</li><li><strong>Videos más estables</strong> - Reduce notablemente la vibración al grabar caminando.</li><li><strong>Zoom más estable</strong> - Corrige micro-vibraciones al hacer zoom.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔄 OIS vs EIS</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>OIS (Óptica)</strong> - Hardware. No pierde calidad. Mejor para fotos fijas.</li><li><strong>EIS (Electrónica)</strong> - Software. Recorta bordes del video. Puede perder algo de calidad.</li></ul>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Si tomas muchas fotos de noche o grabas videos, busca un celular con OIS.</p></div>`
+  },
+  'bateria': {
+    titulo: '🔋 Batería',
+    contenido: `<p class="mb-4">La <strong class="text-indigo-600">batería</strong> determina cuánto dura el celular sin cargar. Se mide en mAh.</p>
+    <ul class="list-disc pl-6 mb-4"><li><strong>3000-4000 mAh</strong> - Pequeña, gama baja o compactos.</li><li><strong>4000-5000 mAh</strong> - Estándar actual, 1 día.</li><li><strong>5000-6000 mAh</strong> - Hasta 2 días.</li><li><strong>&gt;6000 mAh</strong> - Autonomía extrema, teléfonos más gruesos.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">⚛️ Química de la batería</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>Li-Ion</strong> - Tecnología más antigua.</li><li><strong>Li-Po</strong> - La más común hoy. Más ligera y segura.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔋 Ciclos de vida</h4>
+    <p>Una batería dura entre 500 y 800 ciclos completos antes de bajar al 80% de capacidad.</p>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> No dejes la batería bajar del 20% frecuentemente ni la cargues al 100% siempre (ideal entre 20% y 80%).</p></div>`
+  },
+  'carga': {
+    titulo: '⚡ Carga Rápida',
+    contenido: `<p class="mb-4">La <strong class="text-indigo-600">carga rápida</strong> determina qué tan rápido se recupera la batería. Se mide en vatios (W).</p>
+    <ul class="list-disc pl-6 mb-4"><li><strong>10-15W</strong> - Lenta (2-3h).</li><li><strong>18-25W</strong> - Estándar (1.5-2h).</li><li><strong>33-45W</strong> - Rápida (1h).</li><li><strong>66-80W</strong> - Muy rápida (30-45min).</li><li><strong>&gt;100W</strong> - Ultracarga (15-20min).</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">📱 Tecnologías de carga rápida</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>Qualcomm Quick Charge</strong> - En Snapdragon.</li><li><strong>USB Power Delivery (PD)</strong> - Estándar universal.</li><li><strong>VOOC / Warp Charge / SuperCharge</strong> - Cargas proprietarias.</li></ul>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> 33-45W es el punto dulce: carga rápido sin generar demasiado calor.</p></div>`
+  },
+  'inalambrica': {
+    titulo: '🔌 Carga Inalámbrica',
+    contenido: `<p class="mb-4">La <strong class="text-indigo-600">carga inalámbrica</strong> permite cargar sin cables mediante inducción electromagnética.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">⚙️ ¿Cómo funciona?</h4>
+    <p>Una base genera un campo electromagnético. El celular tiene una bobina que convierte ese campo en electricidad.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔢 Potencias típicas</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>5-7.5W</strong> - Lenta.</li><li><strong>10-15W</strong> - Rápida.</li><li><strong>15-25W</strong> - Ultra rápida.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">✅ Ventajas</h4>
+    <ul class="list-disc pl-6 mb-4"><li>Comodidad, no desgasta el puerto USB.</li><li>Puedes tener bases en varios lugares.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">❌ Desventajas</h4>
+    <ul class="list-disc pl-6 mb-4"><li>Más lenta que la cableada.</li><li>Menos eficiente (30-40% pérdida).</li><li>Genera calor, puede acortar vida de batería.</li></ul>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Ideal si usas mucho el puerto USB (ej. en el auto).</p></div>`
+  },
+  'nfc': {
+    titulo: '📲 NFC (Near Field Communication)',
+    contenido: `<p class="mb-4">El <strong class="text-indigo-600">NFC</strong> permite comunicación a corta distancia (menos de 4 cm).</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">💳 Pagos sin contacto</h4>
+    <p>Con NFC puedes pagar con Google Wallet, Apple Pay o la billetera de tu banco. Es seguro porque requiere desbloquear el celular y la distancia es muy corta.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔗 Otros usos</h4>
+    <ul class="list-disc pl-6 mb-4"><li>Compartir archivos.</li><li>Leer etiquetas NFC (tarjetas de transporte, etiquetas inteligentes).</li><li>Parear dispositivos Bluetooth rápidamente.</li><li>Identificación (DNI electrónico, llaves de hotel).</li></ul>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Si pagas con el celular, asegúrate que tenga NFC. Cada vez es más común.</p></div>`
+  },
+  'bt': {
+    titulo: '📶 Bluetooth',
+    contenido: `<p class="mb-4">El <strong class="text-indigo-600">Bluetooth</strong> conecta el celular con audífonos, parlantes, relojes, etc.</p>
+    <h4 class="font-bold text-lg mt-4 mb-2">🔢 Versiones de Bluetooth</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>5.0</strong> - Estándar actual. Buen alcance y eficiencia.</li><li><strong>5.1</strong> - Localización precisa.</li><li><strong>5.2 / 5.3</strong> - LE Audio, mejor calidad.</li><li><strong>5.4 / 6.0</strong> - Lo último, mejor eficiencia.</li></ul>
+    <h4 class="font-bold text-lg mt-4 mb-2">🎧 Códecs de audio</h4>
+    <ul class="list-disc pl-6 mb-4"><li><strong>SBC</strong> - Básico.</li><li><strong>AAC</strong> - Mejor calidad, usado en iPhone.</li><li><strong>aptX / LDAC</strong> - Alta calidad, para audiófilos.</li></ul>
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4"><p class="text-sm text-indigo-800"><strong>💡 Tip:</strong> Bluetooth 5.0 es suficiente para la mayoría. La versión no es tan importante como el códec de audio.</p></div>`
+  }
+};
+
+function abrirExplicacion(tipo, label, valor = null) {
+  const modal = document.getElementById('modalExplicacion');
+  const titulo = document.getElementById('modalTitulo');
+  const contenido = document.getElementById('modalContenido');
+  
+  // Si es resistencia y hay un valor específico (IP54, IP68, etc.)
+  if (tipo === 'resistencia' && valor) {
+    mostrarExplicacionResistenciaEspecifica(valor, label);
+    modal.classList.remove('hidden');
+    return;
+  }
+  
+  // 👇 NUEVO: Si es pantalla y hay un valor específico
+  if (tipo === 'pantalla' && valor) {
+    mostrarExplicacionPantallaEspecifica(valor, label);
+    modal.classList.remove('hidden');
+    return;
+  }
+  
+  const expl = explicaciones[tipo];
+  if (expl) { titulo.innerHTML = expl.titulo; contenido.innerHTML = expl.contenido; }
+  else { titulo.innerHTML = label; contenido.innerHTML = `<p class="text-gray-500">Próximamente: explicación de ${label}.</p>`; }
+  modal.classList.remove('hidden');
+}
+
+function mostrarExplicacionResistenciaEspecifica(valor, label) {
+  const modal = document.getElementById('modalExplicacion');
+  const titulo = document.getElementById('modalTitulo');
+  const contenido = document.getElementById('modalContenido');
+  
+  // Extraer todos los IP de la cadena (ej: "IP68, IP69 y IP69K" → ["IP68", "IP69", "IP69K"])
+  const ips = valor.match(/IP\d{1,2}[A-Z]*/gi) || [];
+  
+  // Detectar si tiene certificación militar MIL-STD
+  const tieneMIL = /MIL-STD|MIL-STD-810|MIL-STD-810G|MIL-STD-810H/i.test(valor);
+  
+  if (ips.length === 0 && !tieneMIL) {
+    const expl = explicaciones['resistencia'];
+    titulo.innerHTML = expl.titulo;
+    contenido.innerHTML = expl.contenido;
+    modal.classList.remove('hidden');
+    return;
+  }
+  
+  let html = `<p class="mb-4">El celular tiene <strong class="text-indigo-600">${ips.join(', ')}${tieneMIL ? (ips.length ? ' y ' : '') + 'certificación militar' : ''}</strong>. Te explicamos qué significa cada nivel:</p>`;
+  
+  // Explicación de cada nivel IP
+  // Explicación de cada nivel IP (solo si hay un solo IP, para evitar repetir cuando hay múltiples)
+if (ips.length === 1) {
+  ips.forEach(ip => {
+    const nivel = ip.toUpperCase();
+    const aguaMatch = nivel.match(/IP\d{1,2}(\d)/i);
+    const agua = aguaMatch ? parseInt(aguaMatch[1]) : null;
+    const polvoMatch = nivel.match(/IP(\d)\d/i);
+    const polvo = polvoMatch ? parseInt(polvoMatch[1]) : null;
+    const esIP69K = nivel.includes('69K');
+    
+    let polvoTexto = '';
+    if (polvo === 5) polvoTexto = 'Protección parcial contra el polvo (no entra suficiente para dañar el equipo).';
+    else if (polvo === 6) polvoTexto = 'Protección total contra el polvo (hermético, no entra nada).';
+    else if (polvo) polvoTexto = `Protección nivel ${polvo} contra partículas sólidas.`;
+    
+    let aguaTexto = '';
+    if (esIP69K) aguaTexto = 'Resistente a agua a alta presión y alta temperatura (limpieza industrial con vapor/agua caliente).';
+    else if (agua === 4) aguaTexto = 'Resistente a salpicaduras de agua desde cualquier dirección.';
+    else if (agua === 5) aguaTexto = 'Resistente a chorros de agua a baja presión.';
+    else if (agua === 6) aguaTexto = 'Resistente a chorros de agua potentes (oleaje, lluvia intensa).';
+    else if (agua === 7) aguaTexto = 'Sumergible hasta 1 metro durante 30 minutos.';
+    else if (agua === 8) aguaTexto = 'Sumergible a más de 1 metro (el fabricante especifica la profundidad).';
+    else if (agua === 9) aguaTexto = 'Resistente a agua a alta presión y alta temperatura.';
+    else if (agua) aguaTexto = `Protección nivel ${agua} contra agua.`;
+    
+    html += `
+      <div class="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
+        <h4 class="font-bold text-indigo-700 text-lg">${nivel}</h4>
+        <div class="mt-2 space-y-1">
+          ${polvoTexto ? `<p><strong class="text-indigo-600">🛡️ Polvo:</strong> ${polvoTexto}</p>` : ''}
+          ${aguaTexto ? `<p><strong class="text-indigo-600">💧 Agua:</strong> ${aguaTexto}</p>` : ''}
+        </div>
+      </div>
+    `;
+  });
+}
+  
+// Si hay múltiples IPs, explicar por qué
+if (ips.length > 1) {
+  // Detectar qué tipos de IP están presentes en ESTE celular
+  const tieneIP68 = ips.some(ip => /IP68/i.test(ip));
+  const tieneIP67 = ips.some(ip => /IP67/i.test(ip));
+  const tieneIP66 = ips.some(ip => /IP66/i.test(ip));
+  const tieneIP65 = ips.some(ip => /IP65/i.test(ip));
+  const tieneIP54 = ips.some(ip => /IP54/i.test(ip));
+  const tieneIP69 = ips.some(ip => /IP69(?!K)/i.test(ip));
+  const tieneIP69K = ips.some(ip => /IP69K/i.test(ip));
+  
+  // Construir lista de IPs que tiene el celular para el título
+  const ipsTitulo = [];
+  if (tieneIP68) ipsTitulo.push('IP68');
+  if (tieneIP67) ipsTitulo.push('IP67');
+  if (tieneIP66) ipsTitulo.push('IP66');
+  if (tieneIP65) ipsTitulo.push('IP65');
+  if (tieneIP54) ipsTitulo.push('IP54');
+  if (tieneIP69) ipsTitulo.push('IP69');
+  if (tieneIP69K) ipsTitulo.push('IP69K');
+  
+  // Construir lista de IPs de sumersión (IP67 o IP68)
+  const ipsSumersion = [];
+  if (tieneIP68) ipsSumersion.push({ ip: 'IP68', descripcion: 'Puede sumergirse en agua quieta (piscina, río, bañera).' });
+  if (tieneIP67) ipsSumersion.push({ ip: 'IP67', descripcion: 'Puede sumergirse hasta 1 metro durante 30 minutos (piscina, río, bañera).' });
+  
+  // Construir lista de IPs de chorros (IP54, IP65, IP66, IP69, IP69K)
+  const ipsChorros = [];
+  if (tieneIP69K) ipsChorros.push({ ip: 'IP69K', descripcion: 'Resiste chorros de agua a alta presión y alta temperatura (hasta 80°C) (limpieza con manguera, lluvia intensa con viento, vapor).' });
+  if (tieneIP69) ipsChorros.push({ ip: 'IP69', descripcion: 'Resiste chorros de agua a alta presión (limpieza con manguera, lluvia intensa con viento).' });
+  if (tieneIP66) ipsChorros.push({ ip: 'IP66', descripcion: 'Resiste chorros de agua potentes (lluvia intensa, lavado con manguera).' });
+  if (tieneIP65) ipsChorros.push({ ip: 'IP65', descripcion: 'Resiste chorros de agua a baja presión.' });
+  if (tieneIP54) ipsChorros.push({ ip: 'IP54', descripcion: 'Resiste salpicaduras de agua.' });
+  
+  // Unir IPs para el título (ej: "IP68 + IP69K" o "IP67 + IP66")
+  let tituloIPs = ipsTitulo.join(' + ');
+  
+  html += `
+    <div class="bg-blue-50 rounded-lg p-4 mb-4 border-l-4 border-blue-500">
+      <h4 class="font-bold text-blue-700 text-lg">🔍 ¿Por qué múltiples certificaciones IP?</h4>
+      <p class="text-sm mb-2">Cuando un celular tiene varias certificaciones IP, significa que ha sido probado para <strong>diferentes tipos de exposición</strong> al agua. <strong>Una certificación NO incluye automáticamente a las otras</strong> porque las pruebas son diferentes.</p>
+      
+      <div class="bg-white rounded-lg p-3 mt-2 text-sm">
+        <p class="font-semibold text-blue-800">📌 ¿Qué significa cada certificación de ESTE celular?</p>
+        <ul class="list-disc pl-5 mt-1 space-y-1">
+          ${ipsTitulo.map(ip => {
+            if (ip === 'IP68') return '<li><strong>IP68</strong> → Protección total contra polvo + sumergible a más de 1 metro.</li>';
+            if (ip === 'IP67') return '<li><strong>IP67</strong> → Protección total contra polvo + sumergible hasta 1 metro / 30 minutos.</li>';
+            if (ip === 'IP66') return '<li><strong>IP66</strong> → Protección total contra polvo + chorros de agua potentes.</li>';
+            if (ip === 'IP65') return '<li><strong>IP65</strong> → Protección contra polvo + chorros de agua a baja presión.</li>';
+            if (ip === 'IP54') return '<li><strong>IP54</strong> → Protección parcial contra polvo + salpicaduras de agua.</li>';
+            if (ip === 'IP69') return '<li><strong>IP69</strong> → Protección total contra polvo + chorros de agua a alta presión.</li>';
+            if (ip === 'IP69K') return '<li><strong>IP69K</strong> → Protección total contra polvo + chorros de agua a alta presión y alta temperatura (hasta 80°C).</li>';
+            return '';
+          }).join('')}
+        </ul>
+      </div>
+      
+      ${(ipsSumersion.length > 0 && ipsChorros.length > 0) ? `
+        <div class="bg-green-50 rounded-lg p-3 mt-2 text-sm border-l-4 border-green-500">
+          <p class="font-semibold text-green-800">✅ Este celular tiene ${tituloIPs}</p>
+          <p class="text-sm mt-1">Esto significa que está protegido para <strong>TODOS</strong> los escenarios:</p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            ${ipsSumersion.map(s => `<li><strong>${s.ip}</strong> → ${s.descripcion}</li>`).join('')}
+            ${ipsChorros.map(c => `<li><strong>${c.ip}</strong> → ${c.descripcion}</li>`).join('')}
+          </ul>
+          <p class="text-xs text-green-700 mt-2">💡 Es la combinación ideal para condiciones extremas.</p>
+        </div>
+      ` : ''}
+      
+      <div class="bg-amber-50 p-2 rounded mt-2">
+        <p class="text-xs text-amber-800"><strong>⚠️ Nota importante:</strong> Las certificaciones de chorros a presión (IP69, IP69K, IP66, IP65, IP54) <strong>NO</strong> garantizan sumersión. Para eso se necesita IP68 o IP67.</p>
+      </div>
+    </div>
+  `;
+}
+  
+  // Explicación de MIL-STD-810H si está presente
+  if (tieneMIL) {
+    html += `
+      <div class="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-emerald-500">
+        <h4 class="font-bold text-emerald-700 text-lg">🛡️ MIL-STD-810H (Certificación Militar)</h4>
+        <p class="mb-2">Es un estándar del ejército de Estados Unidos que garantiza que el dispositivo ha pasado pruebas extremas de durabilidad.</p>
+        <h5 class="font-semibold text-emerald-700 mt-3 mb-1">📋 Pruebas que supera:</h5>
+        <ul class="list-disc pl-6 space-y-1 text-sm">
+          <li><strong>Caídas</strong> - Desde 1.22 metros sobre superficies duras (hasta 26 caídas).</li>
+          <li><strong>Temperaturas extremas</strong> - Desde -32°C hasta 63°C (funcionamiento).</li>
+          <li><strong>Humedad</strong> - Hasta 95% de humedad relativa.</li>
+          <li><strong>Vibraciones</strong> - Simula transporte en vehículos militares.</li>
+          <li><strong>Altitud</strong> - Hasta 4,572 metros de altura.</li>
+          <li><strong>Polvo y arena</strong> - Exposición controlada a partículas.</li>
+          <li><strong>Salinidad</strong> - Resistencia a la corrosión por sal.</li>
+          <li><strong>Golpes</strong> - Impactos de hasta 40g.</li>
+          <li><strong>Congelamiento/descongelamiento</strong> - Ciclos extremos de temperatura.</li>
+        </ul>
+        <p class="text-xs text-emerald-700 mt-3"><strong>ℹ️ Variantes:</strong> MIL-STD-810G (versión anterior, 2008), MIL-STD-810H (versión actual, 2019). Cuanto más nueva la letra, más exigentes las pruebas.</p>
+        <div class="bg-emerald-50 p-3 rounded-lg mt-3">
+          <p class="text-xs text-emerald-800"><strong>⚠️ Nota:</strong> MIL-STD-810H <strong>NO</strong> garantiza resistencia al agua. Para eso está la certificación IP. Esta certificación se enfoca en golpes, caídas, temperaturas extremas y vibraciones.</p>
+        </div>
+      </div>
+    `;
+  }
+  
+  html += `
+    <div class="bg-amber-50 p-4 rounded-lg mt-4">
+      <p class="text-sm text-amber-800"><strong>⚠️ Nota importante:</strong> La resistencia IP puede degradarse con el uso y los golpes. No es permanente. Un celular IP68 puede perder su resistencia si se cae o se golpea.</p>
+    </div>
+  `;
+  
+  // Título dinámico
+  let tituloTexto = '💧 Resistencia';
+  if (ips.length > 0) tituloTexto += `: ${ips.join(', ')}`;
+  if (tieneMIL) tituloTexto += `${ips.length > 0 ? ' + ' : ': '}MIL-STD-810H`;
+  titulo.innerHTML = tituloTexto;
+  contenido.innerHTML = html;
+  modal.classList.remove('hidden');
+}
+
+function mostrarExplicacionPantallaEspecifica(valor, label) {
+  const modal = document.getElementById('modalExplicacion');
+  const titulo = document.getElementById('modalTitulo');
+  const contenido = document.getElementById('modalContenido');
+  
+  const pantallaTexto = valor;
+  
+  // Detectar tamaño
+  const tamañoMatch = pantallaTexto.match(/(\d+\.?\d*)"\s*/i);
+  const tamaño = tamañoMatch ? tamañoMatch[1] + '"' : null;
+  
+  // ========= DETECCIÓN DE RESOLUCIÓN (con distinción de +) =========
+  let resolucion = null;
+  let resolucionDetalle = '';
+  
+  // UHD / 4K
+  if (/UHD|4K/i.test(pantallaTexto)) {
+    resolucion = 'UHD (4K)';
+    resolucionDetalle = '3840 x 2160 píxeles. Es la resolución más alta disponible en celulares. Ideal para ver videos en 4K (YouTube, Netflix, etc.) y editar fotos/videos. Ofrece un nivel de detalle increíble, pero la diferencia con QHD es casi imperceptible en pantallas de menos de 7". Consume más batería y requiere más potencia de procesamiento.';
+  }
+  // WQHD+ (con +)
+  else if (/WQHD\+/i.test(pantallaTexto)) {
+    resolucion = 'WQHD+ (Wide Quad HD Plus)';
+    resolucionDetalle = 'Alrededor de 3200 x 1440 píxeles. Es la versión alargada (20:9) del WQHD. Ofrece la misma altura que el QHD (1440p) pero más ancha, adaptada a los teléfonos modernos sin bordes. Mayor nitidez que FHD+, ideal para pantallas grandes de 6.5" o más. Consume más batería que el FHD+.';
+  }
+  // WQHD (sin +)
+  else if (/WQHD(?!\+)/i.test(pantallaTexto) && !/WQHD\+/i.test(pantallaTexto)) {
+    resolucion = 'WQHD (Wide Quad HD)';
+    resolucionDetalle = '2560 x 1440 píxeles (formato 16:9). Es la versión panorámica del QHD. Ofrece la misma calidad que el QHD (1440p) pero en formato más ancho. Es menos común en teléfonos modernos porque hoy se usan formatos más alargados (20:9).';
+  }
+  // QHD+ (con +)
+  else if (/QHD\+/i.test(pantallaTexto)) {
+    resolucion = 'QHD+ (Quad HD Plus)';
+    resolucionDetalle = 'Alrededor de 3200 x 1440 píxeles. Es la versión alargada (20:9) del QHD. Mantiene la altura de 1440p pero es más ancha, adaptada a pantallas modernas sin bordes. Ofrece imágenes muy nítidas, ideal para ver contenido en 2K, jugar y realidad virtual. La diferencia con FHD+ es sutil en pantallas de menos de 6.5", pero se nota en pantallas grandes. Consume más batería que FHD+.';
+  }
+  // QHD (sin +)
+  else if (/QHD(?!\+)/i.test(pantallaTexto) && !/QHD\+/i.test(pantallaTexto) && !/WQHD/i.test(pantallaTexto)) {
+    resolucion = 'QHD (Quad HD)';
+    resolucionDetalle = '2560 x 1440 píxeles (formato 16:9). Es una resolución de gama alta que ofrece imágenes muy nítidas. La diferencia con QHD+ es el formato: el QHD+ es más ancho (20:9 vs 16:9). En calidad es prácticamente la misma. Ideal para ver contenido en 2K y jugar. Consume más batería que el FHD+.';
+  }
+  // FHD+ (con +)
+  else if (/FHD\+/i.test(pantallaTexto)) {
+    resolucion = 'FHD+ (Full HD Plus)';
+    resolucionDetalle = 'Alrededor de 2400 x 1080 píxeles (formato 20:9). Es el estándar actual de la industria. Es la versión alargada del Full HD, adaptada a pantallas modernas sin bordes. Ofrece una excelente relación entre calidad de imagen y consumo de batería. Perfecta para ver videos en Full HD, jugar, leer y navegar. Es más que suficiente para la gran mayoría de usuarios.';
+  }
+  // FHD (sin +)
+  else if (/FHD(?!\+)/i.test(pantallaTexto) && !/FHD\+/i.test(pantallaTexto)) {
+    resolucion = 'FHD (Full HD)';
+    resolucionDetalle = '1920 x 1080 píxeles (formato 16:9). Es una resolución estándar que ofrece buena calidad de imagen. La diferencia con FHD+ es el formato: el FHD+ es más ancho (20:9). Hoy es menos común en teléfonos modernos, que usan formatos más alargados. Sigue siendo una buena resolución para la mayoría de usuarios.';
+  }
+  // HD+ (con +)
+  else if (/HD\+/i.test(pantallaTexto)) {
+    resolucion = 'HD+ (HD Plus)';
+    resolucionDetalle = 'Alrededor de 1600 x 720 píxeles (formato 20:9). Es la versión alargada del HD básico, adaptada a pantallas modernas. Es una resolución de gama de entrada, suficiente para uso diario (WhatsApp, redes sociales, llamadas), pero en pantallas grandes los píxeles pueden verse ligeramente. No es ideal para ver videos en alta calidad o jugar. Consume poca batería.';
+  }
+  // HD (sin +)
+  else if (/HD(?!\+)/i.test(pantallaTexto) && !/HD\+/i.test(pantallaTexto) && !/FHD/i.test(pantallaTexto) && !/QHD/i.test(pantallaTexto) && !/UHD/i.test(pantallaTexto)) {
+    resolucion = 'HD (720p)';
+    resolucionDetalle = '1280 x 720 píxeles (formato 16:9). Es una resolución básica, común en celulares de gama baja de generaciones anteriores. La diferencia con HD+ es el formato: el HD+ es más ancho (20:9). Suficiente para uso muy básico, pero en pantallas modernas la nitidez es limitada.';
+  }
+  
+  // ========= DETECCIÓN DE TIPO DE PANEL =========
+  let tipoPanel = null;
+  let panelExplicacion = '';
+  
+  if (/Dynamic AMOLED 2X/i.test(pantallaTexto)) {
+    tipoPanel = 'Dynamic AMOLED 2X';
+    panelExplicacion = 'Es la pantalla más avanzada de Samsung. Es un AMOLED con certificación HDR10+, tasa de refresco adaptativa de 1-120Hz (LTPO) que ahorra batería, colores ultra precisos (100% DCI-P3), contraste 2,000,000:1 y brillo de hasta 2600 nits. Es la tecnología utilizada en los Galaxy S23, S24, S25 Ultra y Z Fold.';
+  }
+  else if (/Dynamic AMOLED/i.test(pantallaTexto) && !/2X/i.test(pantallaTexto)) {
+    tipoPanel = 'Dynamic AMOLED';
+    panelExplicacion = 'Es la pantalla premium de Samsung introducida en 2019 con el Galaxy S10. Es un Super AMOLED con certificación HDR10+, colores más vivos y mejor brillo. A diferencia del 2X, tiene tasa de refresco fija (60Hz) y no es adaptativa. Se encuentra en Galaxy S10, Note10 y algunos modelos de gama alta de esa generación.';
+  }
+  else if (/Super AMOLED/i.test(pantallaTexto)) {
+    tipoPanel = 'Super AMOLED';
+    panelExplicacion = 'Es una versión mejorada del AMOLED, creada por Samsung. Integra el panel táctil directamente en la pantalla, lo que la hace más delgada y con mejor brillo. Ofrece negros perfectos, colores extremadamente vivos y gran ahorro de batería si usas temas oscuros. Es la tecnología de pantalla más popular en gama alta.';
+  }
+  else if (/AMOLED/i.test(pantallaTexto)) {
+    tipoPanel = 'AMOLED';
+    panelExplicacion = 'Siglas de "Active Matrix Organic Light Emitting Diode". Cada píxel genera su propia luz, por lo que los negros son perfectos (píxeles apagados) y los colores son muy vivos. Es ideal para ver videos y fotos. Ahorra batería cuando se usan temas oscuros. El único inconveniente es que puede sufrir "burn-in" (marcas permanentes) si se muestran imágenes fijas por mucho tiempo.';
+  }
+  else if (/pOLED/i.test(pantallaTexto)) {
+    tipoPanel = 'pOLED';
+    panelExplicacion = 'Es una variante flexible del AMOLED. La "p" significa "plástico", lo que permite pantallas curvas, más delgadas y resistentes. Ofrece las mismas ventajas del AMOLED (negros perfectos, colores vivos), pero es más cara de fabricar. Muy común en celulares con bordes curvos.';
+  }
+  else if (/IPS LCD/i.test(pantallaTexto)) {
+    tipoPanel = 'IPS LCD';
+    panelExplicacion = 'Siglas de "In-Plane Switching Liquid Crystal Display". Usa una luz de fondo blanca que atraviesa píxeles de color. Ofrece colores más naturales y precisos que los AMOLED, y mejores ángulos de visión que los LCD tradicionales. Es más económica de fabricar y no sufre de burn-in. La desventaja es que los negros no son tan profundos (se ven grises) y consume más batería, especialmente con fondos oscuros.';
+  }
+  else if (/TFT LCD/i.test(pantallaTexto)) {
+    tipoPanel = 'TFT LCD';
+    panelExplicacion = 'Siglas de "Thin-Film Transistor Liquid Crystal Display". Es la tecnología de pantalla más antigua y económica. Ofrece colores más apagados y ángulos de visión limitados. Se usa principalmente en celulares de gama muy baja. No es recomendable si buscas buena calidad de imagen.';
+  }
+  else if (/LCD/i.test(pantallaTexto) && !/IPS/i.test(pantallaTexto)) {
+    tipoPanel = 'LCD';
+    panelExplicacion = 'Pantalla de cristal líquido con retroiluminación. Es una tecnología más antigua que los AMOLED. Los colores son decentes pero los negros no son profundos (se ven grises). Es común en celulares de gama baja. Consume más batería que un AMOLED.';
+  }
+  else if (/PLS/i.test(pantallaTexto)) {
+    tipoPanel = 'PLS';
+    panelExplicacion = 'Siglas de "Plane-to-Line Switching". Es una tecnología de Samsung, similar al IPS LCD, pero con mejor brillo y ángulos de visión. Ofrece colores más vivos que un IPS tradicional. Es común en celulares de gama media de Samsung.';
+  }
+  else if (/OLED/i.test(pantallaTexto)) {
+    tipoPanel = 'OLED';
+    panelExplicacion = 'Similar al AMOLED, pero sin la matriz activa. Cada píxel genera su propia luz. Ofrece negros perfectos y colores vivos. Es común en iPhone y algunos Android de gama alta. Mismas ventajas y desventajas que el AMOLED.';
+  }
+  
+  // ========= DETECCIÓN DE TASA DE REFRESCO =========
+  const hzMatch = pantallaTexto.match(/(\d{2,3})\s*Hz/i);
+  const hz = hzMatch ? parseInt(hzMatch[1]) : null;
+  let hzExplicacion = '';
+  if (hz) {
+    if (hz >= 144) hzExplicacion = `${hz}Hz es una tasa de refresco extremadamente alta, diseñada para gamers y esports. La fluidez es impresionante, pero consume mucha batería.`;
+    else if (hz >= 120) hzExplicacion = `${hz}Hz es una tasa de refresco muy alta, ideal para juegos y scrolling suave. La diferencia con 60Hz es muy notable. Es la preferida por los jugadores móviles.`;
+    else if (hz >= 90) hzExplicacion = `${hz}Hz es una tasa de refresco alta. Notarás más fluidez al hacer scroll en redes sociales y al navegar. Es un buen equilibrio entre fluidez y consumo de batería.`;
+    else hzExplicacion = `${hz}Hz es la tasa de refresco estándar. Es suficiente para la mayoría de usuarios y consume poca batería.`;
+  }
+  
+  // ========= CONSTRUIR HTML =========
+  let html = `<p class="mb-4">La pantalla de este celular es: <strong class="text-indigo-600">${pantallaTexto}</strong></p>`;
+  
+  // Explicación del tamaño
+  if (tamaño) {
+    let tamañoExplicacion = '';
+    const tamañoNum = parseFloat(tamaño);
+    if (tamañoNum < 6.1) tamañoExplicacion = `Una pantalla de ${tamaño} es considerada compacta. Es ideal para quienes prefieren celulares pequeños y fáciles de usar con una sola mano. Perfecta para llamadas, mensajería y uso casual.`;
+    else if (tamañoNum >= 6.1 && tamañoNum < 6.5) tamañoExplicacion = `Una pantalla de ${tamaño} es el tamaño más equilibrado. Es cómoda de usar con una mano y lo suficientemente grande para ver videos y jugar ocasionalmente. Es la opción más popular.`;
+    else if (tamañoNum >= 6.5 && tamañoNum < 6.7) tamañoExplicacion = `Una pantalla de ${tamaño} es considerada grande. Es ideal para ver películas, jugar y multitarea. Puede ser menos cómoda para usar con una sola mano, pero la experiencia multimedia es excelente.`;
+    else tamañoExplicacion = `Una pantalla de ${tamaño} es muy grande, casi del tamaño de una tablet pequeña. Es perfecta para consumir contenido multimedia, leer documentos y jugar. Definitivamente requiere dos manos para usar.`;
+    
+    html += `
+      <div class="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
+        <h4 class="font-bold text-indigo-700 text-lg">📏 Tamaño: ${tamaño}</h4>
+        <p class="text-sm">${tamañoExplicacion}</p>
+      </div>
+    `;
+  }
+  
+  // Explicación de la resolución
+  if (resolucion) {
+    html += `
+      <div class="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
+        <h4 class="font-bold text-indigo-700 text-lg">📐 Resolución: ${resolucion}</h4>
+        <p class="text-sm">${resolucionDetalle}</p>
+      </div>
+    `;
+  }
+  
+  // Explicación del tipo de panel
+  if (tipoPanel) {
+    let ventajas = '';
+    let desventajas = '';
+    
+    if (tipoPanel === 'Dynamic AMOLED 2X') {
+      ventajas = '120Hz adaptativo, colores ultra precisos, brillo extremo, HDR10+, ahorro de batería.';
+      desventajas = 'Muy caro, solo en flagship de Samsung.';
+    } else if (tipoPanel === 'Dynamic AMOLED') {
+      ventajas = 'HDR10+, colores vivos, buen brillo.';
+      desventajas = '60Hz fijo (no adaptativo), tecnología anterior (2019).';
+    } else if (tipoPanel === 'Super AMOLED' || tipoPanel === 'AMOLED') {
+      ventajas = 'Negros perfectos, colores vivos, ahorro de batería con temas oscuros.';
+      desventajas = 'Posible "burn-in" (marcas permanentes), más caro.';
+    } else if (tipoPanel === 'pOLED') {
+      ventajas = 'Mismas ventajas del AMOLED, permite pantallas curvas.';
+      desventajas = 'Más caro, menos resistencia a golpes.';
+    } else if (tipoPanel === 'IPS LCD') {
+      ventajas = 'Colores naturales, económicas, sin burn-in, buena durabilidad.';
+      desventajas = 'Negros menos profundos, mayor consumo de batería.';
+    } else if (tipoPanel === 'PLS') {
+      ventajas = 'Mejor brillo y ángulos de visión que IPS, buena relación calidad-precio.';
+      desventajas = 'Negros no tan profundos como AMOLED.';
+    } else {
+      ventajas = 'Económica.';
+      desventajas = 'Calidad de imagen inferior, menor brillo.';
+    }
+    
+    html += `
+      <div class="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
+        <h4 class="font-bold text-indigo-700 text-lg">🖥️ Tipo de panel: ${tipoPanel}</h4>
+        <p class="text-sm mb-2">${panelExplicacion}</p>
+        <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-green-50 p-2 rounded"><span class="font-semibold text-green-700">✅ Ventajas:</span> ${ventajas}</div>
+          <div class="bg-red-50 p-2 rounded"><span class="font-semibold text-red-700">❌ Desventajas:</span> ${desventajas}</div>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Explicación de la tasa de refresco
+  if (hz) {
+    html += `
+      <div class="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
+        <h4 class="font-bold text-indigo-700 text-lg">🔄 Tasa de refresco: ${hz}Hz</h4>
+        <p class="text-sm">${hzExplicacion}</p>
+        <p class="text-xs text-slate-500 mt-2">⚠️ Mayor Hz = más fluidez, pero también más consumo de batería. Los celulares modernos suelen tener "refresco adaptativo" que ajusta los Hz según lo que estés haciendo.</p>
+      </div>
+    `;
+  }
+  
+  // Si no se detectó nada específico
+  if (!tamaño && !resolucion && !tipoPanel && !hz) {
+    html += `
+      <div class="bg-gray-50 rounded-lg p-4 mb-4">
+        <p class="text-sm">No se pudieron detectar detalles específicos de esta pantalla. La información mostrada es: ${pantallaTexto}</p>
+        <p class="text-xs text-slate-500 mt-2">Si crees que falta información, revisa el formato en tu archivo Excel.</p>
+      </div>
+    `;
+  }
+  
+  // Tip final
+  html += `
+    <div class="bg-indigo-50 p-4 rounded-lg mt-4">
+      <p class="text-sm text-indigo-800"><strong>💡 Tip final:</strong> Para la mayoría de usuarios, una pantalla <strong>AMOLED o IPS LCD</strong> con resolución <strong>FHD+</strong> y tasa de refresco de <strong>90Hz o 120Hz</strong> ofrece la mejor experiencia sin sacrificar demasiada batería.</p>
+    </div>
+  `;
+  
+  titulo.innerHTML = `📱 Pantalla: ${pantallaTexto.substring(0, 50)}${pantallaTexto.length > 50 ? '...' : ''}`;
+  contenido.innerHTML = html;
+  modal.classList.remove('hidden');
+}
+
+function cerrarModal() { document.getElementById('modalExplicacion').classList.add('hidden'); }
+
+function hacerTablaClickeable() {
+  console.log('hacerTablaClickeable ejecutándose');
+  
+  document.querySelectorAll('#tbody tr').forEach(fila => {
+    const tituloCelda = fila.querySelector('td:first-child');
+    if (tituloCelda) {
+      const texto = tituloCelda.innerText;
+      let tipo = null;
+      if (texto.includes('Pantalla')) tipo = 'pantalla';
+      else if (texto.includes('Resistencia')) tipo = 'resistencia';
+      else if (texto.includes('Refresco')) tipo = 'refresco';
+      else if (texto.includes('Procesador')) tipo = 'procesador';
+      else if (texto.includes('AnTuTu')) tipo = 'antutu';
+      else if (texto.includes('RAM')) tipo = 'ram';
+      else if (texto.includes('Almacenamiento')) tipo = 'almacenamiento';
+      else if (texto.includes('Cámaras') && !texto.includes('Frontal')) tipo = 'camSistema';
+      else if (texto.includes('OIS')) tipo = 'ois';
+      else if (texto.includes('Batería')) tipo = 'bateria';
+      else if (texto.includes('Carga') && !texto.includes('Inalámbrica')) tipo = 'carga';
+      else if (texto.includes('Carga Inalámbrica')) tipo = 'inalambrica';
+      else if (texto.includes('NFC')) tipo = 'nfc';
+      else if (texto.includes('Bluetooth')) tipo = 'bt';
+      
+      if (tipo) {
+        tituloCelda.style.cursor = 'pointer';
+        tituloCelda.style.color = '#4f46e5';
+        tituloCelda.style.fontWeight = '600';
+        tituloCelda.style.textDecoration = 'underline';
+        tituloCelda.style.textDecorationStyle = 'dotted';
+        tituloCelda.onclick = () => abrirExplicacion(tipo, texto);
+      }
+    }
+    
+    // Hacer clickeables los valores de las celdas (IP y pantalla)
+    for (let i = 2; i <= 4; i++) {
+      const valorCelda = fila.querySelector(`td:nth-child(${i})`);
+      if (valorCelda) {
+        const valorTexto = valorCelda.innerText.trim();
+        if (valorTexto === '' || valorTexto === '—') continue;
+        
+        // Detectar si es un valor de resistencia IP
+        const esIP = /IP\d{1,2}[A-Z]*/i.test(valorTexto);
+        
+        // Detectar si esta fila es la de Pantalla
+        const esFilaPantalla = tituloCelda && tituloCelda.innerText.includes('Pantalla');
+        
+        if (esIP) {
+          valorCelda.style.cursor = 'pointer';
+          valorCelda.style.color = '#4f46e5';
+          valorCelda.style.fontWeight = '500';
+          valorCelda.style.textDecoration = 'underline';
+          valorCelda.style.textDecorationStyle = 'dotted';
+          valorCelda.onclick = (e) => {
+            e.stopPropagation();
+            mostrarExplicacionResistenciaEspecifica(valorTexto, valorTexto);
+          };
+        }
+        // Si es la fila de Pantalla, hacer clickeable el valor
+        else if (esFilaPantalla) {
+          valorCelda.style.cursor = 'pointer';
+          valorCelda.style.color = '#4f46e5';
+          valorCelda.style.fontWeight = '500';
+          valorCelda.style.textDecoration = 'underline';
+          valorCelda.style.textDecorationStyle = 'dotted';
+          valorCelda.onclick = (e) => {
+            e.stopPropagation();
+            mostrarExplicacionPantallaEspecifica(valorTexto, valorTexto);
+          };
+        }
+      }
+    }
+  });
 }
 
 // ========= Recomendador =========
-const W = { cpu:.25, cam:.18, screen:.10, ram:.12, storage:.07, battery:.12, resist:.06, bt:.04, price:.06 };
-function numFromText(t){ if(!t) return null; const s=(''+t).toLowerCase(); const m=s.match(/(\d+(?:\.\d+)?)/); return m?parseFloat(m[1]):null; }
-function parseAnTuTu(s){ if(!s) return null; const z=(''+s).toLowerCase().replace(/,/g,''); const m=z.match(/(\d+(?:\.\d+)?)/); if(!m) return null; let v=parseFloat(m[1]); if(/m\b/.test(z)) v*=1e6; else if(/k\b/.test(z)) v*=1e3; return v; }
-function hasOIS(s){ return /^s/i.test(String(s||'')); }
-function nm(proc){ const m=String(proc||'').match(/(\d+)\s*nm/i); return m?parseInt(m[1],10):null; }
-function hz(v){ const m=String(v||'').match(/(\d{2,3})\s*Hz/i); return m?parseInt(m[1],10):null; }
-function priceNum(s){ const z=(''+(s||'')).replace(/[^\d\.]/g,''); const v=parseFloat(z); return isNaN(v)?null:v; }
-function waterScore(v){ const s=String(v||'').toUpperCase(); if(s.includes('IP69'))return 1; if(s.includes('IP68'))return .95; if(s.includes('IP67'))return .9; if(s.includes('IP66'))return .85; if(s.includes('IP65'))return .8; if(s.includes('IP54'))return .55; if(s.includes('IP'))return .5; return .3; }
-function btVer(v){ const m=String(v||'').match(/(\d(?:\.\d)?)/); return m?parseFloat(m[1]):0; }
+const W = { cpu: .25, cam: .18, screen: .10, ram: .12, storage: .07, battery: .12, resist: .06, bt: .04, price: .06 };
+function numFromText(t) { if (!t) return null; const s = ('' + t).toLowerCase(); const m = s.match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : null; }
+function parseAnTuTu(s) { if (!s) return null; const z = ('' + s).toLowerCase().replace(/,/g, ''); const m = z.match(/(\d+(?:\.\d+)?)/); if (!m) return null; let v = parseFloat(m[1]); if (/m\b/.test(z)) v *= 1e6; else if (/k\b/.test(z)) v *= 1e3; return v; }
+function hasOIS(s) { return /^s/i.test(String(s || '')); }
+function nm(proc) { const m = String(proc || '').match(/(\d+)\s*nm/i); return m ? parseInt(m[1], 10) : null; }
+function hz(v) { const m = String(v || '').match(/(\d{2,3})\s*Hz/i); return m ? parseInt(m[1], 10) : null; }
+function priceNum(s) { const z = ('' + (s || '')).replace(/[^\d\.]/g, ''); const v = parseFloat(z); return isNaN(v) ? null : v; }
+function waterScore(v) { const s = String(v || '').toUpperCase(); if (s.includes('IP69')) return 1; if (s.includes('IP68')) return .95; if (s.includes('IP67')) return .9; if (s.includes('IP66')) return .85; if (s.includes('IP65')) return .8; if (s.includes('IP54')) return .55; if (s.includes('IP')) return .5; return .3; }
+function btVer(v) { const m = String(v || '').match(/(\d(?:\.\d)?)/); return m ? parseFloat(m[1]) : 0; }
 
-function rawScore(p){
-  const scores={
-    cpu: (0.7*(parseAnTuTu(p.antutu)||0)/1_250_000) + (0.3*(nm(p.procesador)? (14-Math.min(nm(p.procesador),14))/10 : 0.5)),
-    cam: (0.4*(numFromText(p.camSistema)||0)/200) + (0.2*(numFromText(p.camFrontal)||0)/32) + (0.4*(hasOIS(p.ois)?1:0)),
-    screen: (hz(p.refresco)||60)>=120?1: (hz(p.refresco)||60)>=90?0.75:0.5,
-    ram: Math.max(0, Math.min(1, ((numFromText(p.ram)||0)-2)/10 )),
-    storage: /UFS/i.test(String(p.rom||'')) ? (/3\.1|3\.0/i.test(p.rom)?1:/2\.2/i.test(p.rom)?0.85:/2\.1/i.test(p.rom)?0.75:0.7) : (/eMMC/i.test(p.rom)?0.55:0.65),
-    battery: 0.65*Math.max(0, Math.min(1, ((numFromText(p.bateria)||0)-4500)/2200 )) + 0.35*Math.max(0, Math.min(1, (numFromText(p.carga)||0)/66 )),
+function rawScore(p) {
+  const scores = {
+    cpu: (0.7 * (parseAnTuTu(p.antutu) || 0) / 1_250_000) + (0.3 * (nm(p.procesador) ? (14 - Math.min(nm(p.procesador), 14)) / 10 : 0.5)),
+    cam: (0.4 * (numFromText(p.camSistema) || 0) / 200) + (0.2 * (numFromText(p.camFrontal) || 0) / 32) + (0.4 * (hasOIS(p.ois) ? 1 : 0)),
+    screen: (hz(p.refresco) || 60) >= 120 ? 1 : (hz(p.refresco) || 60) >= 90 ? 0.75 : 0.5,
+    ram: Math.max(0, Math.min(1, ((numFromText(p.ram) || 0) - 2) / 10)),
+    storage: /UFS/i.test(String(p.rom || '')) ? (/3\.1|3\.0/i.test(p.rom) ? 1 : /2\.2/i.test(p.rom) ? 0.85 : /2\.1/i.test(p.rom) ? 0.75 : 0.7) : (/eMMC/i.test(p.rom) ? 0.55 : 0.65),
+    battery: 0.65 * Math.max(0, Math.min(1, ((numFromText(p.bateria) || 0) - 4500) / 2200)) + 0.35 * Math.max(0, Math.min(1, (numFromText(p.carga) || 0) / 66)),
     resist: waterScore(p.resistencia),
-    bt: (v=> v>=5.4?1: v>=5.3?.9: v>=5.1?.75: v>=5.0?.7:.6)(btVer(p.bt)),
-    price: (pr=> pr==null? .6 : pr<=600?1: pr<=900?.85: pr<=1400?.7: pr<=2000?.55:.4)(priceNum(p.contado))
+    bt: (v => v >= 5.4 ? 1 : v >= 5.3 ? .9 : v >= 5.1 ? .75 : v >= 5.0 ? .7 : .6)(btVer(p.bt)),
+    price: (pr => pr == null ? .6 : pr <= 600 ? 1 : pr <= 900 ? .85 : pr <= 1400 ? .7 : pr <= 2000 ? .55 : .4)(priceNum(p.contado))
   };
-  const total = Object.keys(W).reduce((a,k)=> a + W[k]*scores[k], 0);
-  return {total, parts:scores};
+  const total = Object.keys(W).reduce((a, k) => a + W[k] * scores[k], 0);
+  return { total, parts: scores };
 }
-const gama = price => price<=599?'0-599':price<=899?'600-899':price<=1299?'900-1299':price<=1599?'1300-1599':price<=1999?'1600-1999':'2000-2999';
 
-function runRecommender(names){
-  const sec=document.getElementById('winnerSection');
-  if(!names.length){ sec.classList.add('hidden'); return; }
-  const chosen=names.map(byName).filter(Boolean);
-  const bands=new Set(chosen.map(x=>gama(priceNum(x.contado)||0)));
-  const sameBand=bands.size===1; const bonus = sameBand?0.02:0; // +2/100 si están en la misma gama por precio
-  const scored=chosen.map(p=>{ const {total,parts}=rawScore(p); return {name:p.nombre,p,parts,score:total+bonus,bonus,price:priceNum(p.contado)||0}; }).sort((a,b)=>b.score-a.score);
-  const top=scored[0];
-  document.getElementById('winnerText').textContent = `Ganador sugerido: ${top.name}${top.bonus>0?' (bono por misma gama)':''}`;
-  const reasons=[]; const avg=k=> scored.slice(1).reduce((s,r)=>s+r.parts[k],0)/Math.max(1,scored.length-1);
-  if(top.parts.price>=.7) reasons.push(`Mejor relación precio (${top.p.contado}).`);
-  if(top.parts.resist>avg('resist')+.05) reasons.push('Mejor resistencia IP.');
-  if(top.parts.screen>=.95) reasons.push('Pantalla muy fluida (120 Hz).');
-  if(top.parts.cpu>avg('cpu')+.03) reasons.push('CPU/AnTuTu superiores.');
-  if(top.parts.ram>avg('ram')+.10) reasons.push('Más RAM utilizable.');
-  if(top.parts.battery>avg('battery')+.06) reasons.push('Mayor autonomía / carga rápida.');
-  if(top.parts.cam>avg('cam')+.05) reasons.push('Mejor cámara/frontal u OIS.');
-  document.getElementById('winnerReasons').innerHTML = reasons.map(r=>`<li>${r}</li>`).join('') || '<li>Equilibrio general.</li>';
-  const ol=document.getElementById('rankList'); const pct=x=>(x*100).toFixed(1);
-  ol.innerHTML = scored.map(r=>`<li><span class='font-semibold'>${r.name}</span> — <span class='mono'>${pct(r.score)}</span>
-    <div class='text-xs opacity-80'>CPU ${pct(r.parts.cpu*W.cpu)} · Cámara ${pct(r.parts.cam*W.cam)} · Pantalla ${pct(r.parts.screen*W.screen)} · RAM ${pct(r.parts.ram*W.ram)} · ROM ${pct(r.parts.storage*W.storage)} · Batería/Carga ${pct(r.parts.battery*W.battery)} · Resistencia ${pct(r.parts.resist*W.resist)} · BT ${pct(r.parts.bt*W.bt)} · Precio ${pct(r.parts.price*W.price)}<br/>Gama: ${gama(r.price)} — ${r.p.contado}</div>`).join('');
+const gama = price => price <= 599 ? '0-599' : price <= 899 ? '600-899' : price <= 1299 ? '900-1299' : price <= 1599 ? '1300-1599' : price <= 1999 ? '1600-1999' : '2000-2999';
+
+function runRecommender(names) {
+  const sec = document.getElementById('winnerSection');
+  if (!names.length) { sec.classList.add('hidden'); return; }
+  const chosen = names.map(byName).filter(Boolean);
+  const bands = new Set(chosen.map(x => gama(priceNum(x.contado) || 0)));
+  const sameBand = bands.size === 1;
+  const bonus = sameBand ? 0.02 : 0;
+  const scored = chosen.map(p => { const { total, parts } = rawScore(p); return { name: p.nombre, p, parts, score: total + bonus, bonus, price: priceNum(p.contado) || 0 }; }).sort((a, b) => b.score - a.score);
+  const top = scored[0];
+  document.getElementById('winnerText').textContent = `🏆 Ganador: ${top.name}${top.bonus > 0 ? ' (bono misma gama)' : ''}`;
+  const reasons = [];
+  const avg = k => scored.slice(1).reduce((s, r) => s + r.parts[k], 0) / Math.max(1, scored.length - 1);
+  if (top.parts.price >= .7) reasons.push(`💰 Mejor relación precio (${top.p.contado})`);
+  if (top.parts.resist > avg('resist') + .05) reasons.push(`💧 Mejor resistencia IP`);
+  if (top.parts.screen >= .95) reasons.push(`📱 Pantalla muy fluida (120 Hz)`);
+  if (top.parts.cpu > avg('cpu') + .03) reasons.push(`⚡ CPU/AnTuTu superior`);
+  if (top.parts.ram > avg('ram') + .10) reasons.push(`🧠 Más RAM utilizable`);
+  if (top.parts.battery > avg('battery') + .06) reasons.push(`🔋 Mayor autonomía/carga rápida`);
+  if (top.parts.cam > avg('cam') + .05) reasons.push(`📸 Mejor cámara/frontal u OIS`);
+  document.getElementById('winnerReasons').innerHTML = reasons.map(r => `<li>${r}</li>`).join('') || '<li>✨ Equilibrio general</li>';
+  const ol = document.getElementById('rankList');
+  const pct = x => (x * 100).toFixed(1);
+  ol.innerHTML = scored.map(r => `<li><span class='font-semibold'>${r.name}</span> — <span class='mono'>${pct(r.score)}</span>
+    <div class='text-xs opacity-80'>CPU ${pct(r.parts.cpu * W.cpu)} · Cámara ${pct(r.parts.cam * W.cam)} · Pantalla ${pct(r.parts.screen * W.screen)} · RAM ${pct(r.parts.ram * W.ram)} · ROM ${pct(r.parts.storage * W.storage)} · Batería ${pct(r.parts.battery * W.battery)} · Resistencia ${pct(r.parts.resist * W.resist)} · BT ${pct(r.parts.bt * W.bt)} · Precio ${pct(r.parts.price * W.price)}<br/>💰 ${r.p.contado}</div>`).join('');
   sec.classList.remove('hidden');
 }
 
-function update(){
-  [s1,s2,s3].forEach(sel=> buildSelect(sel, ''));
-  const names=[s1.value,s2.value,s3.value].filter(Boolean);
+function update() {
+  [s1, s2, s3].forEach(sel => buildSelect(sel, ''));
+  const names = [s1.value, s2.value, s3.value].filter(Boolean);
   renderCards3D(names);
-  renderTable(names);
+  renderTable();
   runRecommender(names);
 }
 
 document.getElementById('btnComparar').addEventListener('click', update);
-;[s1,s2,s3].forEach(sel=> sel.addEventListener('change', update));
-document.getElementById('btnReset').addEventListener('click', ()=>{ [s1,s2,s3].forEach(s=>s.value=''); update(); });
+[s1, s2, s3].forEach(sel => sel.addEventListener('change', update));
+document.getElementById('btnReset').addEventListener('click', () => { [s1, s2, s3].forEach(s => s.value = ''); update(); });
 
 // ========= Carga/Cache =========
-const estado=document.getElementById('estado');
-document.getElementById('btnClear').addEventListener('click', ()=>{ localStorage.removeItem(KEY); location.reload(); });
-document.getElementById('fileInput').addEventListener('change', async e=>{
-  const f=e.target.files?.[0]; if(!f) return;
-  try{
-    const buf=await f.arrayBuffer();
-    const wb=XLSX.read(buf);
-    const {name:sheetCar, ws:wsCar}=getSheet(wb,'caracteristicas');
-    const {name:sheetImg, ws:wsImg}=getSheet(wb,'imagen');
-    const Acar=sheetToAOA(wsCar); const Aimg= wsImg? sheetToAOA(wsImg) : [];
-    const car=buildFromCaracteristicas(Acar);
-    const imgs=buildFromImagen(Aimg);
-    DATA = mergeCarImg(car, imgs);
-    MODELOS_SET = Array.from(new Set(DATA.map(d=>d.nombre))).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
-    localStorage.setItem(KEY, JSON.stringify({Acar,Aimg,sheetCar,sheetImg}));
-    estado.innerHTML=`Datos de <b>${sheetCar}</b> + fotos de <b>${sheetImg}</b> • ${new Date().toLocaleString()} · <span class='mono'>${DATA.length}</span> equipos`;
-    buildSelect(s1,''); buildSelect(s2,''); buildSelect(s3,'');
+const estado = document.getElementById('estado');
+document.getElementById('btnClear').addEventListener('click', () => { localStorage.removeItem(KEY); location.reload(); });
+
+async function loadExcelFromServer() {
+  try {
+    console.log('Buscando COMP.xlsx...');
+    const response = await fetch('COMP.xlsx');
+    if (!response.ok) throw new Error('No se encontró COMP.xlsx');
+    const blob = await response.blob();
+    const wb = XLSX.read(await blob.arrayBuffer());
+    const { name: sheetCar, ws: wsCar } = getSheet(wb, 'caracteristicas');
+    const { name: sheetImg, ws: wsImg } = getSheet(wb, 'imagen');
+    const Acar = sheetToAOA(wsCar);
+    const Aimg = wsImg ? sheetToAOA(wsImg) : [];
+    const car = buildFromCaracteristicas(Acar);
+    const links3D = buildFromImagen(Aimg);
+    DATA = mergeCarImg(car, links3D);
+    MODELOS_SET = Array.from(new Set(DATA.map(d => d.nombre))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    estado.innerHTML = `✅ Datos cargados desde COMP.xlsx • ${DATA.length} equipos | ${links3D.filter(l => l.link3D).length} con visor 3D`;
+    buildSelect(s1, ''); buildSelect(s2, ''); buildSelect(s3, '');
     update();
-  }catch(err){ alert('Error leyendo Excel: '+(err.message||err)); }
+  } catch (err) {
+    estado.innerHTML = `⚠️ No se encontró COMP.xlsx. Usa el botón "Cargar Excel" manualmente.`;
+    console.error(err);
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  try {
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf);
+    const { name: sheetCar, ws: wsCar } = getSheet(wb, 'caracteristicas');
+    const { name: sheetImg, ws: wsImg } = getSheet(wb, 'imagen');
+    const Acar = sheetToAOA(wsCar);
+    const Aimg = wsImg ? sheetToAOA(wsImg) : [];
+    const car = buildFromCaracteristicas(Acar);
+    const links3D = buildFromImagen(Aimg);
+    DATA = mergeCarImg(car, links3D);
+    MODELOS_SET = Array.from(new Set(DATA.map(d => d.nombre))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    localStorage.setItem(KEY, JSON.stringify({ Acar, Aimg, sheetCar, sheetImg }));
+    estado.innerHTML = `✅ Cargado: ${DATA.length} equipos | ${links3D.filter(l => l.link3D).length} con visor 3D`;
+    buildSelect(s1, ''); buildSelect(s2, ''); buildSelect(s3, '');
+    update();
+  } catch (err) { alert('Error: ' + (err.message || err)); }
 });
 
-(function init(){
-  const cache=(()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch{return null} })();
-  if(cache?.Acar?.length){
-    const car=buildFromCaracteristicas(cache.Acar);
-    const imgs=buildFromImagen(cache.Aimg||[]);
-    DATA = mergeCarImg(car, imgs);
-    MODELOS_SET = Array.from(new Set(DATA.map(d=>d.nombre))).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
-    estado.innerHTML=`Datos desde cache de <b>${cache.sheetCar}</b> + fotos <b>${cache.sheetImg}</b> • ${new Date().toLocaleString()} · <span class='mono'>${DATA.length}</span> equipos`;
-    buildSelect(s1,''); buildSelect(s2,''); buildSelect(s3,'');
+(async function init() {
+  const cache = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null } })();
+  if (cache?.Acar?.length) {
+    const car = buildFromCaracteristicas(cache.Acar);
+    const links3D = buildFromImagen(cache.Aimg || []);
+    DATA = mergeCarImg(car, links3D);
+    MODELOS_SET = Array.from(new Set(DATA.map(d => d.nombre))).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    estado.innerHTML = `📦 Cache: ${DATA.length} equipos | ${links3D.filter(l => l.link3D).length} con visor 3D`;
+    buildSelect(s1, ''); buildSelect(s2, ''); buildSelect(s3, '');
     update();
+  } else {
+    await loadExcelFromServer();
   }
 })();
 </script>

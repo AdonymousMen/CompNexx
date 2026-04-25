@@ -104,6 +104,8 @@
       transition: background .12s;
     }
     .ac-option:hover, .ac-option.focused { background: var(--indigo-pale); color: var(--indigo); }
+    .ac-option-selected { background: var(--indigo-pale); color: var(--indigo); font-weight: 600; }
+    .ac-option-selected:hover { background: #c7d2fe; }
     .ac-chip {
       display: flex;
       align-items: center;
@@ -176,18 +178,17 @@
       height: 480px;
       border-radius: 14px;
       overflow: hidden;
-      background: #fff;
+      background: #ffffff;
       position: relative;
     }
     .viewer-shell iframe {
       width: 100%; height: 100%;
       border: none;
-      /* El transform-origin debe ser top center para que el zoom
-         no desplace el contenido fuera del contenedor */
       transform-origin: top center;
-      /* Evita que el elemento escalado afecte el flujo del documento */
       position: absolute;
       top: 0; left: 0;
+      /* Elimina el fondo blanco del iframe mezclando con el fondo del contenedor */
+      mix-blend-mode: multiply;
     }
     .viewer-loader {
       position: absolute; inset: 0;
@@ -379,7 +380,9 @@
 
     .viewer-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,.92);
+      background: rgba(15,15,30,.55);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
       z-index: 100;
     }
     .viewer-overlay.hidden { display: none; }
@@ -404,7 +407,7 @@
       position: fixed;
       inset: 0;
       overflow: hidden;
-      background: #111;
+      background: transparent;
       z-index: 101;
     }
     .viewer-zoom-wrap iframe {
@@ -414,9 +417,10 @@
       width: min(900px, 95vw);
       height: min(700px, 80vh);
       border: none;
-      background: #111;
+      background: transparent;
       border-radius: 16px;
       transition: transform .15s ease;
+      mix-blend-mode: multiply;
       display: block;
     }
     /* transparent intercept layer — captures scroll, removed when user drags */
@@ -744,23 +748,64 @@ function buildAC(wrapId, slot) {
   const select = document.createElement('select');
   select.className = 'ac-select';
 
-  wrap.appendChild(input);
+  // Wrapper con botón X para limpiar
+  const inputWrap = document.createElement('div');
+  inputWrap.style.cssText = 'position:relative;';
+  inputWrap.appendChild(input);
+
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = '×';
+  clearBtn.setAttribute('aria-label', 'Quitar selección');
+  clearBtn.style.cssText = 'display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;border:none;background:#c7d2fe;color:var(--indigo);cursor:pointer;font-size:14px;font-weight:700;line-height:1;align-items:center;justify-content:center;';
+  clearBtn.onclick = () => {
+    selections[slot] = null;
+    input.value = '';
+    input.style.borderColor = '';
+    input.style.background = '';
+    input.style.color = '';
+    input.style.fontWeight = '';
+    input.style.paddingRight = '';
+    clearBtn.style.display = 'none';
+    dropdown.classList.remove('open');
+    input.setAttribute('aria-expanded', 'false');
+    buildSelectList('');
+    update();
+  };
+  inputWrap.appendChild(clearBtn);
+
+  wrap.appendChild(inputWrap);
   wrap.appendChild(dropdown);
   wrap.appendChild(select);
 
   let focusedIdx = -1;
 
   function showChip(name) {
-    wrap.innerHTML = '';
-    const chip = document.createElement('div');
-    chip.className = 'ac-chip';
-    chip.innerHTML = `<span class="truncate">${name}</span>`;
-    const btn = document.createElement('button');
-    btn.textContent = '×';
-    btn.setAttribute('aria-label', 'Quitar ' + name);
-    btn.onclick = () => { selections[slot] = null; buildAC(wrapId, slot); update(); };
-    chip.appendChild(btn);
-    wrap.appendChild(chip);
+    input.value = name;
+    input.style.borderColor = 'var(--indigo)';
+    input.style.background = 'var(--indigo-pale)';
+    input.style.color = 'var(--indigo)';
+    input.style.fontWeight = '600';
+    input.style.paddingRight = '32px';
+    clearBtn.style.display = 'flex';
+    // Cerrar dropdown al seleccionar
+    dropdown.classList.remove('open');
+    input.setAttribute('aria-expanded', 'false');
+    buildSelectList('');
+  }
+
+  function renderDropdownFull(selectedName) {
+    // Siempre muestra TODOS los equipos, marcando el seleccionado con checkmark
+    const list = MODELOS_SET;
+    buildSelectList('');
+    focusedIdx = -1;
+    dropdown.innerHTML = list.map((n, i) => {
+      const isSel = n === selectedName;
+      return `<button class="ac-option${isSel ? ' ac-option-selected' : ''}" type="button" data-idx="${i}" data-name="${encodeURIComponent(n)}">${isSel ? '✓ ' : ''}${n}</button>`;
+    }).join('');
+    dropdown.classList.add('open');
+    input.setAttribute('aria-expanded', 'true');
+    const selEl = dropdown.querySelector('.ac-option-selected');
+    if (selEl) selEl.scrollIntoView({ block: 'nearest' });
   }
 
   function buildSelectList(filterQ) {
@@ -774,9 +819,10 @@ function buildAC(wrapId, slot) {
     buildSelectList(q);
     if (!q.trim() || !list.length) { dropdown.classList.remove('open'); return; }
     focusedIdx = -1;
-    dropdown.innerHTML = list.map((n, i) =>
-      `<button class="ac-option" type="button" data-idx="${i}" data-name="${encodeURIComponent(n)}">${n}</button>`
-    ).join('');
+    dropdown.innerHTML = list.map((n, i) => {
+      const isSel = n === selections[slot];
+      return `<button class="ac-option${isSel ? ' ac-option-selected' : ''}" type="button" data-idx="${i}" data-name="${encodeURIComponent(n)}">${isSel ? '✓ ' : ''}${n}</button>`;
+    }).join('');
     dropdown.classList.add('open');
     input.setAttribute('aria-expanded', 'true');
   }
@@ -787,7 +833,28 @@ function buildAC(wrapId, slot) {
     update();
   }
 
-  input.addEventListener('input', debounce(e => renderDropdown(e.target.value), 200));
+  input.addEventListener('input', debounce(e => {
+    const val = e.target.value;
+    if (val !== selections[slot]) {
+      input.style.borderColor = '';
+      input.style.background = '';
+      input.style.color = '';
+      input.style.fontWeight = '';
+      input.style.paddingRight = '';
+      clearBtn.style.display = 'none';
+      if (!val) {
+        selections[slot] = null;
+        dropdown.classList.remove('open');
+        buildSelectList('');
+        update();
+        return;
+      }
+    } else {
+      // El texto coincide con la selección actual — no abrir lista
+      return;
+    }
+    renderDropdown(val);
+  }, 200));
 
   select.addEventListener('change', () => {
     if (select.value) selectName(select.value);
@@ -813,7 +880,14 @@ function buildAC(wrapId, slot) {
 
   // Restore current selection if any
   if (selections[slot]) {
-    showChip(selections[slot]);
+    input.value = selections[slot];
+    input.style.borderColor = 'var(--indigo)';
+    input.style.background = 'var(--indigo-pale)';
+    input.style.color = 'var(--indigo)';
+    input.style.fontWeight = '600';
+    input.style.paddingRight = '32px';
+    clearBtn.style.display = 'flex';
+    buildSelectList('');
   } else {
     buildSelectList('');
   }
